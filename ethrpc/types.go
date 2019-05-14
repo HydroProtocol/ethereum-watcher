@@ -328,7 +328,40 @@ type proxyBlockWithTransactions struct {
 }
 
 func (proxy *proxyBlockWithTransactions) toBlock() Block {
-	return *(*Block)(unsafe.Pointer(proxy))
+	// todo don't know why, but cause problem in this project
+	//return *(*Block)(unsafe.Pointer(proxy))
+
+	block := Block{
+		Number:           int(proxy.Number),
+		Hash:             proxy.Hash,
+		ParentHash:       proxy.ParentHash,
+		Nonce:            proxy.Nonce,
+		Sha3Uncles:       proxy.Sha3Uncles,
+		LogsBloom:        proxy.LogsBloom,
+		TransactionsRoot: proxy.TransactionsRoot,
+		StateRoot:        proxy.StateRoot,
+		Miner:            proxy.Miner,
+		Difficulty:       big.Int(proxy.Difficulty),
+		TotalDifficulty:  big.Int(proxy.TotalDifficulty),
+		ExtraData:        proxy.ExtraData,
+		Size:             int(proxy.Size),
+		GasLimit:         int(proxy.GasLimit),
+		GasUsed:          int(proxy.GasUsed),
+		Timestamp:        int(proxy.Timestamp),
+		Uncles:           proxy.Uncles,
+	}
+
+	block.Transactions = make([]Transaction, len(proxy.Transactions))
+	for i := range proxy.Transactions {
+		tx := proxy.Transactions[i]
+
+		block.Transactions[i] = Transaction{
+			Hash: tx.Hash,
+			//todo more
+		}
+	}
+
+	return block
 }
 
 type proxyBlock interface {

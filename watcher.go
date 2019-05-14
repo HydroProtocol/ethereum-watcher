@@ -56,9 +56,9 @@ func (watcher *HttpWatcher) LatestSyncedBlockNum() int {
 		return -1
 	}
 
-	b := watcher.SyncedBlocks.Back().Value.(*ethrpc.Block)
+	b := watcher.SyncedBlocks.Back().Value.(ethrpc.Block)
 
-	return (*b).Number
+	return b.Number
 }
 
 func (watcher *HttpWatcher) Run() {
@@ -155,13 +155,13 @@ func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
 			continue
 		}
 
-		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(*ethrpc.Block)
+		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(ethrpc.Block)
 
-		if block.Hash != (*lastSyncedBlock).Hash {
-			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(*ethrpc.Block)
+		if block.Hash != lastSyncedBlock.Hash {
+			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(ethrpc.Block)
 			removedBlock.IsRemoved = true
 
-			watcher.NewBlockChan <- *removedBlock
+			watcher.NewBlockChan <- removedBlock
 		} else {
 			return
 		}
@@ -170,10 +170,10 @@ func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
 
 func (watcher *HttpWatcher) FoundFork(newBlock *ethrpc.Block) bool {
 	for e := watcher.SyncedBlocks.Back(); e != nil; e = e.Prev() {
-		syncedBlock := e.Value.(*ethrpc.Block)
+		syncedBlock := e.Value.(ethrpc.Block)
 
-		if (*syncedBlock).Number+1 == newBlock.Number {
-			return (*syncedBlock).Hash != newBlock.ParentHash
+		if (syncedBlock).Number+1 == newBlock.Number {
+			return (syncedBlock).Hash != newBlock.ParentHash
 		}
 	}
 
