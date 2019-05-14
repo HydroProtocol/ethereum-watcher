@@ -204,6 +204,8 @@ type TransactionReceipt struct {
 	LogsBloom         string
 	Root              string
 	Status            int
+
+	IsRemoved bool
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.

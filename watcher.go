@@ -5,13 +5,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/HydroProtocol/nights-watch/ethrpc"
+	"github.com/HydroProtocol/nights-watch/plugin"
 	"sync"
 	"time"
 )
 
 type Watcher interface {
-	RegisterBlockPlugin(IBlockPlugin)
-	RegisterTxPlugin(ITxPlugin)
+	RegisterBlockPlugin(plugin.IBlockPlugin)
+	RegisterTxPlugin(plugin.ITxPlugin)
 	Run()
 }
 
@@ -19,33 +20,41 @@ type HttpWatcher struct {
 	Ctx  context.Context
 	lock sync.RWMutex
 	API  string
-	//httpClient *http.Client
-	rpc *ethrpc.RPC
+	rpc  *ethrpc.RPC
 
-	NewBlockChan chan ethrpc.Block
-	//LatestSyncedBlockNum uint64
-	SyncedBlocks *list.List
+	//change to pointer element in chan
+	NewBlockChan        chan ethrpc.Block
+	NewTxAndReceiptChan chan *Tuple
 
-	BlockPlugins []IBlockPlugin
-	TxPlugins    []ITxPlugin
+	SyncedBlocks        *list.List
+	SyncedTxAndReceipts *list.List
+
+	BlockPlugins     []plugin.IBlockPlugin
+	TxPlugins        []plugin.ITxPlugin
+	TxReceiptPlugins []plugin.ITxReceiptPlugin
 }
 
 func NewHttpBasedWatcher(ctx context.Context, api string) *HttpWatcher {
 	return &HttpWatcher{
-		Ctx:          ctx,
-		API:          api,
-		rpc:          ethrpc.New(api),
-		NewBlockChan: make(chan ethrpc.Block, 32),
-		SyncedBlocks: list.New(),
+		Ctx:                 ctx,
+		API:                 api,
+		rpc:                 ethrpc.New(api),
+		NewBlockChan:        make(chan ethrpc.Block, 32),
+		NewTxAndReceiptChan: make(chan *Tuple, 518),
+		SyncedBlocks:        list.New(),
 	}
 }
 
-func (watcher *HttpWatcher) RegisterBlockPlugin(plugin IBlockPlugin) {
+func (watcher *HttpWatcher) RegisterBlockPlugin(plugin plugin.IBlockPlugin) {
 	watcher.BlockPlugins = append(watcher.BlockPlugins, plugin)
 }
 
-func (watcher *HttpWatcher) RegisterTxPlugin(plugin ITxPlugin) {
+func (watcher *HttpWatcher) RegisterTxPlugin(plugin plugin.ITxPlugin) {
 	watcher.TxPlugins = append(watcher.TxPlugins, plugin)
+}
+
+func (watcher *HttpWatcher) RegisterTxReceiptPlugin(plugin plugin.ITxReceiptPlugin) {
+	watcher.TxReceiptPlugins = append(watcher.TxReceiptPlugins, plugin)
 }
 
 func (watcher *HttpWatcher) LatestSyncedBlockNum() int {
@@ -129,6 +138,20 @@ func (watcher *HttpWatcher) Run() {
 					txPlugin.AcceptTx(block.Transactions[j])
 				}
 			}
+
+		}
+	}()
+
+	go func() {
+		for {
+			tuple := <-watcher.NewTxAndReceiptChan
+
+			txReceiptPlugins := watcher.TxReceiptPlugins
+			for i := 0; i < len(txReceiptPlugins); i++ {
+				txReceiptPlugin := txReceiptPlugins[i]
+
+				txReceiptPlugin.Accept(tuple.Tx, tuple.Receipt)
+			}
 		}
 	}()
 }
@@ -139,6 +162,69 @@ func (watcher *HttpWatcher) addNewBlock(block ethrpc.Block) {
 
 	watcher.SyncedBlocks.PushBack(block)
 	watcher.NewBlockChan <- block
+
+	// get tx receipts in block, which is time consuming
+	signals := make([]*SyncSignal, 0, len(block.Transactions))
+	for i := 0; i < len(block.Transactions); i++ {
+		tx := block.Transactions[i]
+		syncSigName := fmt.Sprintf("B:%d T:%s", block.Number, tx.Hash)
+
+		sig := newSyncSignal(syncSigName)
+		signals = append(signals, sig)
+
+		go func() {
+			txReceipt, err := watcher.rpc.EthGetTransactionReceipt(tx.Hash)
+			if err != nil {
+				panic(err)
+			}
+
+			sig.WaitPermission()
+			watcher.NewTxAndReceiptChan <- &Tuple{&tx, txReceipt}
+
+			sig.Done()
+		}()
+	}
+
+	for i := 0; i < len(signals); i++ {
+		sig := signals[i]
+		sig.Permit()
+		sig.WaitDone()
+	}
+}
+
+type SyncSignal struct {
+	name       string
+	permission chan bool
+	jobDone    chan bool
+}
+
+func newSyncSignal(name string) *SyncSignal {
+	return &SyncSignal{
+		name:       name,
+		permission: make(chan bool, 1),
+		jobDone:    make(chan bool, 1),
+	}
+}
+
+func (s *SyncSignal) Permit() {
+	s.permission <- true
+}
+
+func (s *SyncSignal) WaitPermission() {
+	<-s.permission
+}
+
+func (s *SyncSignal) Done() {
+	s.jobDone <- true
+}
+
+func (s *SyncSignal) WaitDone() {
+	<-s.jobDone
+}
+
+type Tuple struct {
+	Tx      *ethrpc.Transaction
+	Receipt *ethrpc.TransactionReceipt
 }
 
 func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
@@ -161,7 +247,12 @@ func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
 			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(ethrpc.Block)
 			removedBlock.IsRemoved = true
 
+			tuple := watcher.SyncedTxAndReceipts.Remove(watcher.SyncedTxAndReceipts.Back()).(*Tuple)
+			tuple.Tx.IsRemoved = true
+			tuple.Receipt.IsRemoved = true
+
 			watcher.NewBlockChan <- removedBlock
+			watcher.NewTxAndReceiptChan <- tuple
 		} else {
 			return
 		}

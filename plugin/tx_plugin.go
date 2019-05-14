@@ -1,4 +1,4 @@
-package nights_watch
+package plugin
 
 import "github.com/HydroProtocol/nights-watch/ethrpc"
 
