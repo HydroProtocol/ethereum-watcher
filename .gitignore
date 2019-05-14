@@ -1,0 +1,12 @@
+bin
+.cover
+.idea
+debug.test
+debug
+*.db
+main
+vendor
+.env
+.vscode
+
+.DS_Store
