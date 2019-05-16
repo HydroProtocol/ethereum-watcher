@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/HydroProtocol/nights-watch/ethrpc"
 	"github.com/HydroProtocol/nights-watch/plugin"
+	"github.com/prometheus/common/log"
 	"sync"
 	"time"
 )
@@ -13,6 +14,7 @@ import (
 type Watcher interface {
 	RegisterBlockPlugin(plugin.IBlockPlugin)
 	RegisterTxPlugin(plugin.ITxPlugin)
+	RegisterTxReceiptPlugin(plugin.ITxReceiptPlugin)
 	Run()
 }
 
@@ -70,58 +72,12 @@ func (watcher *HttpWatcher) LatestSyncedBlockNum() int {
 	return b.Number
 }
 
-func (watcher *HttpWatcher) Run() {
+func (watcher *HttpWatcher) Run() error {
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
 	go func() {
-		for {
-			select {
-			case <-watcher.Ctx.Done():
-				return
-			default:
-				latestBlockNum, err := watcher.getCurrentBlockNum()
-				fmt.Println("latestBlockNum", latestBlockNum)
-				if err != nil {
-					panic(err)
-				}
-
-				noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
-
-				fmt.Println("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
-				for watcher.LatestSyncedBlockNum() < latestBlockNum {
-					var newBlockNumToSync int
-					if watcher.LatestSyncedBlockNum() <= 0 {
-						newBlockNumToSync = latestBlockNum
-					} else {
-						newBlockNumToSync = watcher.LatestSyncedBlockNum() + 1
-					}
-
-					newBlock, err := watcher.getBlockByNum(newBlockNumToSync)
-					if err != nil {
-						panic(err)
-					}
-
-					if watcher.FoundFork(newBlock) {
-						fmt.Println("found fork, popping")
-						watcher.popBlocksUntilReachMainChain()
-					} else {
-						fmt.Println("adding new block")
-						watcher.addNewBlock(*newBlock)
-					}
-				}
-
-				if noNewBlockForSync {
-					fmt.Println("no new block to sync, sleep for 3 secs")
-
-					// sleep for 3 secs
-					timer := time.NewTimer(3 * time.Second)
-					<-timer.C
-				}
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			block := <-watcher.NewBlockChan
+		for block := range watcher.NewBlockChan {
 			// run thru block plugins
 			for i := 0; i < len(watcher.BlockPlugins); i++ {
 				blockPlugin := watcher.BlockPlugins[i]
@@ -138,14 +94,14 @@ func (watcher *HttpWatcher) Run() {
 					txPlugin.AcceptTx(block.Transactions[j])
 				}
 			}
-
 		}
+
+		wg.Done()
 	}()
 
+	wg.Add(1)
 	go func() {
-		for {
-			tuple := <-watcher.NewTxAndReceiptChan
-
+		for tuple := range watcher.NewTxAndReceiptChan {
 			txReceiptPlugins := watcher.TxReceiptPlugins
 			for i := 0; i < len(txReceiptPlugins); i++ {
 				txReceiptPlugin := txReceiptPlugins[i]
@@ -153,7 +109,71 @@ func (watcher *HttpWatcher) Run() {
 				txReceiptPlugin.Accept(tuple.Tx, tuple.Receipt)
 			}
 		}
+
+		wg.Done()
 	}()
+
+	for {
+		select {
+		case <-watcher.Ctx.Done():
+			close(watcher.NewBlockChan)
+			close(watcher.NewTxAndReceiptChan)
+
+			wg.Wait()
+
+			return nil
+		default:
+			maxRetryCount := 3
+
+			var latestBlockNum int
+			var err error
+
+			for i := 0; i < maxRetryCount; i++ {
+				latestBlockNum, err = watcher.getCurrentBlockNum()
+				if err == nil {
+					break
+				}
+			}
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("latestBlockNum", latestBlockNum)
+
+			noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
+
+			fmt.Println("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
+			for watcher.LatestSyncedBlockNum() < latestBlockNum {
+				var newBlockNumToSync int
+				if watcher.LatestSyncedBlockNum() <= 0 {
+					newBlockNumToSync = latestBlockNum
+				} else {
+					newBlockNumToSync = watcher.LatestSyncedBlockNum() + 1
+				}
+
+				newBlock, err := watcher.getBlockByNum(newBlockNumToSync)
+				if err != nil {
+					panic(err)
+				}
+
+				if watcher.FoundFork(newBlock) {
+					fmt.Println("found fork, popping")
+					watcher.popBlocksUntilReachMainChain()
+				} else {
+					fmt.Println("adding new block")
+					watcher.addNewBlock(*newBlock)
+				}
+			}
+
+			if noNewBlockForSync {
+				fmt.Println("no new block to sync, sleep for 3 secs")
+
+				// sleep for 3 secs
+				timer := time.NewTimer(3 * time.Second)
+				<-timer.C
+			}
+		}
+	}
 }
 
 func (watcher *HttpWatcher) addNewBlock(block ethrpc.Block) {
@@ -232,6 +252,7 @@ func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
 	defer watcher.lock.Unlock()
 
 	for {
+		log.Debug("check tail block:", watcher.SyncedBlocks.Back())
 		if watcher.SyncedBlocks.Back() == nil {
 			return
 		}
@@ -244,9 +265,11 @@ func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
 		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(ethrpc.Block)
 
 		if block.Hash != lastSyncedBlock.Hash {
+			log.Debug("removing tail block:", watcher.SyncedBlocks.Back())
 			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(ethrpc.Block)
 			removedBlock.IsRemoved = true
 
+			log.Debug("removing tail txAndReceipt:", watcher.SyncedTxAndReceipts.Back())
 			tuple := watcher.SyncedTxAndReceipts.Remove(watcher.SyncedTxAndReceipts.Back()).(*Tuple)
 			tuple.Tx.IsRemoved = true
 			tuple.Receipt.IsRemoved = true
@@ -264,7 +287,14 @@ func (watcher *HttpWatcher) FoundFork(newBlock *ethrpc.Block) bool {
 		syncedBlock := e.Value.(ethrpc.Block)
 
 		if (syncedBlock).Number+1 == newBlock.Number {
-			return (syncedBlock).Hash != newBlock.ParentHash
+			notMatch := (syncedBlock).Hash != newBlock.ParentHash
+
+			if notMatch {
+				log.Debugf("found fork, new block(%d): %s, new block's parent: %s, parent we synced: %s",
+					newBlock.Number, newBlock.Hash, newBlock.ParentHash, syncedBlock.Hash)
+
+				return true
+			}
 		}
 	}
 
