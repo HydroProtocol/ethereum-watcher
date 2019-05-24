@@ -1,18 +1,20 @@
 package plugin
 
-import "github.com/HydroProtocol/nights-watch/ethrpc"
+import (
+	"github.com/HydroProtocol/nights-watch/structs"
+)
 
 type ITxPlugin interface {
-	AcceptTx(transaction ethrpc.Transaction)
+	AcceptTx(transaction structs.RemovableTx)
 }
 
 type TxHashPlugin struct {
 	callback func(txHash string, isRemoved bool)
 }
 
-func (p TxHashPlugin) AcceptTx(transaction ethrpc.Transaction) {
+func (p TxHashPlugin) AcceptTx(transaction structs.RemovableTx) {
 	if p.callback != nil {
-		p.callback(transaction.Hash, transaction.IsRemoved)
+		p.callback(transaction.GetHash(), transaction.IsRemoved)
 	}
 }
 

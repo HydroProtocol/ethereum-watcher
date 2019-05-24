@@ -1,22 +1,24 @@
 package plugin
 
-import "github.com/HydroProtocol/nights-watch/ethrpc"
+import (
+	"github.com/HydroProtocol/nights-watch/structs"
+)
 
 type IBlockPlugin interface {
-	AcceptBlock(ethrpc.Block)
+	AcceptBlock(block *structs.RemovableBlock)
 }
 
 type BlockNumPlugin struct {
-	callback func(blockNum int, isRemoved bool)
+	callback func(blockNum uint64, isRemoved bool)
 }
 
-func (p BlockNumPlugin) AcceptBlock(b ethrpc.Block) {
+func (p BlockNumPlugin) AcceptBlock(b *structs.RemovableBlock) {
 	if p.callback != nil {
-		p.callback(b.Number, b.IsRemoved)
+		p.callback(b.Number(), b.IsRemoved)
 	}
 }
 
-func NewBlockNumPlugin(callback func(int, bool)) BlockNumPlugin {
+func NewBlockNumPlugin(callback func(uint64, bool)) BlockNumPlugin {
 	return BlockNumPlugin{
 		callback: callback,
 	}
@@ -24,21 +26,21 @@ func NewBlockNumPlugin(callback func(int, bool)) BlockNumPlugin {
 
 //provide block info with tx basic infos
 type SimpleBlockPlugin struct {
-	callback func(block ethrpc.Block, isRemoved bool)
+	callback func(block *structs.RemovableBlock)
 }
 
-func (p SimpleBlockPlugin) AcceptBlock(b ethrpc.Block) {
+func (p SimpleBlockPlugin) AcceptBlock(b *structs.RemovableBlock) {
 	if p.callback != nil {
-		p.callback(b, b.IsRemoved)
+		p.callback(b)
 	}
 }
 
-func NewSimpleBlockPlugin(callback func(block ethrpc.Block, isRemoved bool)) SimpleBlockPlugin {
+func NewSimpleBlockPlugin(callback func(block *structs.RemovableBlock)) SimpleBlockPlugin {
 	return SimpleBlockPlugin{
 		callback: callback,
 	}
 }
 
-//todo, block info with tx full infos
-type BlockWithTxInfoPlugin struct {
-}
+// block info with tx full infos
+//type BlockWithTxInfoPlugin struct {
+//}

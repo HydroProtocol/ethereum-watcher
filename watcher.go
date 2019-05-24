@@ -4,29 +4,74 @@ import (
 	"container/list"
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/nights-watch/ethrpc"
+	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
+	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
 	"github.com/HydroProtocol/nights-watch/plugin"
+	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/onrik/ethrpc"
 	"github.com/prometheus/common/log"
 	"sync"
 	"time"
 )
 
-type Watcher interface {
-	RegisterBlockPlugin(plugin.IBlockPlugin)
-	RegisterTxPlugin(plugin.ITxPlugin)
-	RegisterTxReceiptPlugin(plugin.ITxReceiptPlugin)
-	Run()
+//type IWatcher interface {
+//	RegisterBlockPlugin(plugin.IBlockPlugin)
+//	RegisterTxPlugin(plugin.ITxPlugin)
+//	RegisterTxReceiptPlugin(plugin.ITxReceiptPlugin)
+//
+//	//GetCurrentBlockNum() (uint64, error)
+//	//GetCurrentBlock() (sdk.Block, error)
+//	//GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error)
+//
+//	Run()
+//}
+
+type IBlockChainRPC interface {
+	GetCurrentBlockNum() (uint64, error)
+
+	GetBlockByNum(uint64) (sdk.Block, error)
+	GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error)
 }
 
-type HttpWatcher struct {
+type EthBlockChainRPC struct {
+	rpcImpl *ethrpc.EthRPC
+}
+
+func (rpc EthBlockChainRPC) GetBlockByNum(num uint64) (sdk.Block, error) {
+	b, err := rpc.rpcImpl.EthGetBlockByNumber(int(num), true)
+	return &ethereum.EthereumBlock{b}, err
+	panic("implement me")
+}
+
+func (rpc EthBlockChainRPC) GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error) {
+	receipt, error := rpc.rpcImpl.EthGetTransactionReceipt(txHash)
+	return &ethereum.EthereumTransactionReceipt{receipt}, error
+}
+
+func (rpc EthBlockChainRPC) GetCurrentBlockNum() (uint64, error) {
+	num, err := rpc.rpcImpl.EthBlockNumber()
+	return uint64(num), err
+}
+
+func NewEthRPC(api string) *EthBlockChainRPC {
+	rpc := ethrpc.New(api)
+
+	return &EthBlockChainRPC{rpc}
+}
+
+type AbstractWatcher struct {
+	//IWatcher
+
+	//API  string
+	//rpc  *ethrpc.EthRPC
+	rpc IBlockChainRPC
+
 	Ctx  context.Context
 	lock sync.RWMutex
-	API  string
-	rpc  *ethrpc.RPC
 
 	//change to pointer element in chan
-	NewBlockChan        chan ethrpc.Block
-	NewTxAndReceiptChan chan *Tuple
+	NewBlockChan        chan *structs.RemovableBlock
+	NewTxAndReceiptChan chan *structs.RemovableTxAndReceipt
 
 	SyncedBlocks        *list.List
 	SyncedTxAndReceipts *list.List
@@ -36,43 +81,44 @@ type HttpWatcher struct {
 	TxReceiptPlugins []plugin.ITxReceiptPlugin
 }
 
-func NewHttpBasedWatcher(ctx context.Context, api string) *HttpWatcher {
-	return &HttpWatcher{
+func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
+	rpc := NewEthRPC(api)
+
+	return &AbstractWatcher{
 		Ctx:                 ctx,
-		API:                 api,
-		rpc:                 ethrpc.New(api),
-		NewBlockChan:        make(chan ethrpc.Block, 32),
-		NewTxAndReceiptChan: make(chan *Tuple, 518),
+		rpc:                 rpc,
+		NewBlockChan:        make(chan *structs.RemovableBlock, 32),
+		NewTxAndReceiptChan: make(chan *structs.RemovableTxAndReceipt, 518),
 		SyncedBlocks:        list.New(),
 	}
 }
 
-func (watcher *HttpWatcher) RegisterBlockPlugin(plugin plugin.IBlockPlugin) {
+func (watcher *AbstractWatcher) RegisterBlockPlugin(plugin plugin.IBlockPlugin) {
 	watcher.BlockPlugins = append(watcher.BlockPlugins, plugin)
 }
 
-func (watcher *HttpWatcher) RegisterTxPlugin(plugin plugin.ITxPlugin) {
+func (watcher *AbstractWatcher) RegisterTxPlugin(plugin plugin.ITxPlugin) {
 	watcher.TxPlugins = append(watcher.TxPlugins, plugin)
 }
 
-func (watcher *HttpWatcher) RegisterTxReceiptPlugin(plugin plugin.ITxReceiptPlugin) {
+func (watcher *AbstractWatcher) RegisterTxReceiptPlugin(plugin plugin.ITxReceiptPlugin) {
 	watcher.TxReceiptPlugins = append(watcher.TxReceiptPlugins, plugin)
 }
 
-func (watcher *HttpWatcher) LatestSyncedBlockNum() int {
+func (watcher *AbstractWatcher) LatestSyncedBlockNum() uint64 {
 	watcher.lock.RLock()
 	defer watcher.lock.RUnlock()
 
 	if watcher.SyncedBlocks.Len() <= 0 {
-		return -1
+		return 0
 	}
 
-	b := watcher.SyncedBlocks.Back().Value.(ethrpc.Block)
+	b := watcher.SyncedBlocks.Back().Value.(sdk.Block)
 
-	return b.Number
+	return b.Number()
 }
 
-func (watcher *HttpWatcher) Run() error {
+func (watcher *AbstractWatcher) Run() error {
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
@@ -90,8 +136,9 @@ func (watcher *HttpWatcher) Run() error {
 			for i := 0; i < len(txPlugins); i++ {
 				txPlugin := txPlugins[i]
 
-				for j := 0; j < len(block.Transactions); j++ {
-					txPlugin.AcceptTx(block.Transactions[j])
+				for j := 0; j < len(block.GetTransactions()); j++ {
+					tx := structs.NewRemovableTx(block.GetTransactions()[j], false)
+					txPlugin.AcceptTx(tx)
 				}
 			}
 		}
@@ -106,7 +153,7 @@ func (watcher *HttpWatcher) Run() error {
 			for i := 0; i < len(txReceiptPlugins); i++ {
 				txReceiptPlugin := txReceiptPlugins[i]
 
-				txReceiptPlugin.Accept(tuple.Tx, tuple.Receipt)
+				txReceiptPlugin.Accept(structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, false))
 			}
 		}
 
@@ -125,11 +172,11 @@ func (watcher *HttpWatcher) Run() error {
 		default:
 			maxRetryCount := 3
 
-			var latestBlockNum int
+			var latestBlockNum uint64
 			var err error
 
 			for i := 0; i < maxRetryCount; i++ {
-				latestBlockNum, err = watcher.getCurrentBlockNum()
+				latestBlockNum, err = watcher.rpc.GetCurrentBlockNum()
 				if err == nil {
 					break
 				}
@@ -144,14 +191,14 @@ func (watcher *HttpWatcher) Run() error {
 
 			fmt.Println("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
 			for watcher.LatestSyncedBlockNum() < latestBlockNum {
-				var newBlockNumToSync int
+				var newBlockNumToSync uint64
 				if watcher.LatestSyncedBlockNum() <= 0 {
 					newBlockNumToSync = latestBlockNum
 				} else {
 					newBlockNumToSync = watcher.LatestSyncedBlockNum() + 1
 				}
 
-				newBlock, err := watcher.getBlockByNum(newBlockNumToSync)
+				newBlock, err := watcher.rpc.GetBlockByNum(newBlockNumToSync)
 				if err != nil {
 					panic(err)
 				}
@@ -161,7 +208,7 @@ func (watcher *HttpWatcher) Run() error {
 					watcher.popBlocksUntilReachMainChain()
 				} else {
 					fmt.Println("adding new block")
-					watcher.addNewBlock(*newBlock)
+					watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false))
 				}
 			}
 
@@ -176,7 +223,7 @@ func (watcher *HttpWatcher) Run() error {
 	}
 }
 
-func (watcher *HttpWatcher) addNewBlock(block ethrpc.Block) {
+func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) {
 	watcher.lock.Lock()
 	defer watcher.lock.Unlock()
 
@@ -184,22 +231,33 @@ func (watcher *HttpWatcher) addNewBlock(block ethrpc.Block) {
 	watcher.NewBlockChan <- block
 
 	// get tx receipts in block, which is time consuming
-	signals := make([]*SyncSignal, 0, len(block.Transactions))
-	for i := 0; i < len(block.Transactions); i++ {
-		tx := block.Transactions[i]
-		syncSigName := fmt.Sprintf("B:%d T:%s", block.Number, tx.Hash)
+	signals := make([]*SyncSignal, 0, len(block.GetTransactions()))
+	for i := 0; i < len(block.GetTransactions()); i++ {
+		tx := block.GetTransactions()[i]
+		syncSigName := fmt.Sprintf("B:%d T:%s", block.Number(), tx.GetHash())
 
 		sig := newSyncSignal(syncSigName)
 		signals = append(signals, sig)
 
 		go func() {
-			txReceipt, err := watcher.rpc.EthGetTransactionReceipt(tx.Hash)
+			var txReceipt sdk.TransactionReceipt
+			var err error
+
+			retry := 3
+			for i := 0; i <= retry; i++ {
+				txReceipt, err = watcher.rpc.GetTransactionReceipt(tx.GetHash())
+				if err == nil {
+					break
+				}
+			}
+
 			if err != nil {
-				panic(err)
+				panic(fmt.Sprintf("GetTransactionReceipt fail after %d-times retry, err: %s", retry, err))
 			}
 
 			sig.WaitPermission()
-			watcher.NewTxAndReceiptChan <- &Tuple{&tx, txReceipt}
+
+			watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tx, txReceipt, false)
 
 			sig.Done()
 		}()
@@ -242,12 +300,7 @@ func (s *SyncSignal) WaitDone() {
 	<-s.jobDone
 }
 
-type Tuple struct {
-	Tx      *ethrpc.Transaction
-	Receipt *ethrpc.TransactionReceipt
-}
-
-func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
+func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() {
 	watcher.lock.Lock()
 	defer watcher.lock.Unlock()
 
@@ -257,41 +310,38 @@ func (watcher *HttpWatcher) popBlocksUntilReachMainChain() {
 			return
 		}
 
-		block, err := watcher.getBlockByNum(watcher.LatestSyncedBlockNum())
+		block, err := watcher.rpc.GetBlockByNum(watcher.LatestSyncedBlockNum())
 		if err != nil {
 			continue
 		}
 
-		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(ethrpc.Block)
+		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(structs.RemovableBlock)
 
-		if block.Hash != lastSyncedBlock.Hash {
+		if block.Hash() != lastSyncedBlock.Hash() {
 			log.Debug("removing tail block:", watcher.SyncedBlocks.Back())
-			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(ethrpc.Block)
-			removedBlock.IsRemoved = true
+			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(sdk.Block)
 
 			log.Debug("removing tail txAndReceipt:", watcher.SyncedTxAndReceipts.Back())
-			tuple := watcher.SyncedTxAndReceipts.Remove(watcher.SyncedTxAndReceipts.Back()).(*Tuple)
-			tuple.Tx.IsRemoved = true
-			tuple.Receipt.IsRemoved = true
+			tuple := watcher.SyncedTxAndReceipts.Remove(watcher.SyncedTxAndReceipts.Back()).(*structs.TxAndReceipt)
 
-			watcher.NewBlockChan <- removedBlock
-			watcher.NewTxAndReceiptChan <- tuple
+			watcher.NewBlockChan <- structs.NewRemovableBlock(removedBlock, true)
+			watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
 		} else {
 			return
 		}
 	}
 }
 
-func (watcher *HttpWatcher) FoundFork(newBlock *ethrpc.Block) bool {
+func (watcher *AbstractWatcher) FoundFork(newBlock sdk.Block) bool {
 	for e := watcher.SyncedBlocks.Back(); e != nil; e = e.Prev() {
-		syncedBlock := e.Value.(ethrpc.Block)
+		syncedBlock := e.Value.(sdk.Block)
 
-		if (syncedBlock).Number+1 == newBlock.Number {
-			notMatch := (syncedBlock).Hash != newBlock.ParentHash
+		if (syncedBlock).Number()+1 == newBlock.Number() {
+			notMatch := (syncedBlock).Hash() != newBlock.ParentHash()
 
 			if notMatch {
 				log.Debugf("found fork, new block(%d): %s, new block's parent: %s, parent we synced: %s",
-					newBlock.Number, newBlock.Hash, newBlock.ParentHash, syncedBlock.Hash)
+					newBlock.Number(), newBlock.Hash(), newBlock.ParentHash(), syncedBlock.Hash())
 
 				return true
 			}
@@ -299,34 +349,4 @@ func (watcher *HttpWatcher) FoundFork(newBlock *ethrpc.Block) bool {
 	}
 
 	return false
-}
-
-func (watcher *HttpWatcher) getBlockByNum(blockNum int) (*ethrpc.Block, error) {
-	return watcher.rpc.EthGetBlockByNumber(int(blockNum), true)
-}
-
-func (watcher *HttpWatcher) getCurrentBlockNum() (int, error) {
-	i, err := watcher.rpc.EthBlockNumber()
-	if err != nil {
-		return -1, err
-	} else {
-		return i, nil
-	}
-}
-
-// types and interfaces
-type Hash [32]byte
-
-type BlockWithTxInfos struct {
-	ethrpc.Block
-	Transactions []Transaction
-}
-
-type Transaction interface {
-	Hash() Hash
-}
-
-type TransactionReceipt interface {
-	Hash() Hash
-	Status() bool
 }

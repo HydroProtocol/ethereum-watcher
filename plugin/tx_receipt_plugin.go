@@ -1,43 +1,46 @@
 package plugin
 
 import (
-	"github.com/HydroProtocol/nights-watch/ethrpc"
-	"github.com/HydroProtocol/nights-watch/utils"
+	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
+	"github.com/HydroProtocol/nights-watch/structs"
+	"math/big"
+
+	//"github.com/HydroProtocol/nights-watch/utils"
 	"github.com/shopspring/decimal"
 )
 
 type ITxReceiptPlugin interface {
-	Accept(tx *ethrpc.Transaction, receipt *ethrpc.TransactionReceipt)
+	Accept(tx *structs.RemovableTxAndReceipt)
 }
 
 type TxReceiptPlugin struct {
-	callback func(tx *ethrpc.Transaction, receipt *ethrpc.TransactionReceipt)
+	callback func(tx *structs.RemovableTxAndReceipt)
 }
 
-func NewTxReceiptPlugin(callback func(tx *ethrpc.Transaction, receipt *ethrpc.TransactionReceipt)) *TxReceiptPlugin {
+func NewTxReceiptPlugin(callback func(tx *structs.RemovableTxAndReceipt)) *TxReceiptPlugin {
 	return &TxReceiptPlugin{callback}
 }
 
-func (p TxReceiptPlugin) Accept(tx *ethrpc.Transaction, receipt *ethrpc.TransactionReceipt) {
+func (p TxReceiptPlugin) Accept(tx *structs.RemovableTxAndReceipt) {
 	if p.callback != nil {
-		p.callback(tx, receipt)
+		p.callback(tx)
 	}
 }
 
 type ERC20TransferPlugin struct {
-	callback func(tokenAddress, from, to string, amount decimal.Decimal)
+	callback func(tokenAddress, from, to string, amount decimal.Decimal, isRemoved bool)
 }
 
-func NewERC20TransferPlugin(callback func(tokenAddress, from, to string, amount decimal.Decimal)) *ERC20TransferPlugin {
+func NewERC20TransferPlugin(callback func(tokenAddress, from, to string, amount decimal.Decimal, isRemoved bool)) *ERC20TransferPlugin {
 	return &ERC20TransferPlugin{callback}
 }
 
-func (p *ERC20TransferPlugin) Accept(tx *ethrpc.Transaction, receipt *ethrpc.TransactionReceipt) {
+func (p *ERC20TransferPlugin) Accept(tx *structs.RemovableTxAndReceipt) {
 	if p.callback != nil {
-		events := extractERC20TransfersIfExist(receipt)
+		events := extractERC20TransfersIfExist(tx)
 
 		for _, e := range events {
-			p.callback(e.token, e.from, e.to, e.value)
+			p.callback(e.token, e.from, e.to, e.value, tx.IsRemoved)
 		}
 	}
 }
@@ -49,21 +52,38 @@ type TransferEvent struct {
 	value decimal.Decimal
 }
 
-func extractERC20TransfersIfExist(receipt *ethrpc.TransactionReceipt) (rst []TransferEvent) {
+func extractERC20TransfersIfExist(r *structs.RemovableTxAndReceipt) (rst []TransferEvent) {
 	transferEventSig := "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
-	for _, log := range receipt.Logs {
-		if len(log.Topics) == 3 && log.Topics[0] == transferEventSig {
-			from := log.Topics[1]
-			to := log.Topics[2]
+	// todo a little weird
+	if receipt, ok := r.Receipt.(*ethereum.EthereumTransactionReceipt); ok {
+		for _, log := range receipt.Logs {
+			if len(log.Topics) == 3 && log.Topics[0] == transferEventSig {
+				from := log.Topics[1]
+				to := log.Topics[2]
 
-			amount, ok := utils.HexToDecimal(log.Data)
+				amount, ok := HexToDecimal(log.Data)
 
-			if ok {
-				rst = append(rst, TransferEvent{log.Address, from, to, amount})
+				if ok {
+					rst = append(rst, TransferEvent{log.Address, from, to, amount})
+				}
 			}
 		}
 	}
 
 	return
+}
+
+func HexToDecimal(hex string) (decimal.Decimal, bool) {
+	if hex[0:2] == "0x" || hex[0:2] == "0X" {
+		hex = hex[2:]
+	}
+
+	b := new(big.Int)
+	b, ok := b.SetString(hex, 16)
+	if !ok {
+		return decimal.Zero, false
+	}
+
+	return decimal.NewFromBigInt(b, 0), true
 }

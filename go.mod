@@ -3,6 +3,7 @@ module github.com/HydroProtocol/nights-watch
 go 1.12
 
 require (
+	github.com/HydroProtocol/hydro-sdk-backend v0.0.38
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/go-redis/redis v6.15.2+incompatible
@@ -15,8 +16,7 @@ require (
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
 	github.com/sirupsen/logrus v1.4.1
 	github.com/stretchr/testify v1.3.0
-	github.com/tidwall/gjson v1.2.1 // indirect
-	github.com/tidwall/match v1.0.1 // indirect
-	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 )
+
+replace github.com/HydroProtocol/hydro-sdk-backend => ../hydro-sdk-backend
