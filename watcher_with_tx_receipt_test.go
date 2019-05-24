@@ -23,7 +23,7 @@ func TestTxReceiptPlugin(t *testing.T) {
 		}
 	}))
 
-	w.Run()
+	w.RunTillExit()
 
 	time.Sleep(120 * time.Second)
 }
@@ -36,7 +36,7 @@ func TestErc20TransferPlugin(t *testing.T) {
 		fmt.Println("New ERC20 Transfer >>", token, from, "->", to, amount, isRemove)
 	}))
 
-	w.Run()
+	w.RunTillExit()
 
 	time.Sleep(120 * time.Second)
 }

@@ -16,7 +16,7 @@ func TestTxPlugin(t *testing.T) {
 		fmt.Println(">>", txHash, isRemoved)
 	}))
 
-	w.Run()
+	w.RunTillExit()
 
 	time.Sleep(60 * time.Second)
 }

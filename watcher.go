@@ -5,10 +5,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
 	"github.com/HydroProtocol/nights-watch/plugin"
+	"github.com/HydroProtocol/nights-watch/rpc"
 	"github.com/HydroProtocol/nights-watch/structs"
-	"github.com/onrik/ethrpc"
 	"github.com/prometheus/common/log"
 	"sync"
 	"time"
@@ -23,48 +22,15 @@ import (
 //	//GetCurrentBlock() (sdk.Block, error)
 //	//GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error)
 //
-//	Run()
+//	RunTillExit()
 //}
-
-type IBlockChainRPC interface {
-	GetCurrentBlockNum() (uint64, error)
-
-	GetBlockByNum(uint64) (sdk.Block, error)
-	GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error)
-}
-
-type EthBlockChainRPC struct {
-	rpcImpl *ethrpc.EthRPC
-}
-
-func (rpc EthBlockChainRPC) GetBlockByNum(num uint64) (sdk.Block, error) {
-	b, err := rpc.rpcImpl.EthGetBlockByNumber(int(num), true)
-	return &ethereum.EthereumBlock{b}, err
-	panic("implement me")
-}
-
-func (rpc EthBlockChainRPC) GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error) {
-	receipt, error := rpc.rpcImpl.EthGetTransactionReceipt(txHash)
-	return &ethereum.EthereumTransactionReceipt{receipt}, error
-}
-
-func (rpc EthBlockChainRPC) GetCurrentBlockNum() (uint64, error) {
-	num, err := rpc.rpcImpl.EthBlockNumber()
-	return uint64(num), err
-}
-
-func NewEthRPC(api string) *EthBlockChainRPC {
-	rpc := ethrpc.New(api)
-
-	return &EthBlockChainRPC{rpc}
-}
 
 type AbstractWatcher struct {
 	//IWatcher
 
 	//API  string
 	//rpc  *ethrpc.EthRPC
-	rpc IBlockChainRPC
+	rpc rpc.IBlockChainRPC
 
 	Ctx  context.Context
 	lock sync.RWMutex
@@ -82,7 +48,7 @@ type AbstractWatcher struct {
 }
 
 func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
-	rpc := NewEthRPC(api)
+	rpc := rpc.NewEthRPCWithRetry(api, 5)
 
 	return &AbstractWatcher{
 		Ctx:                 ctx,
@@ -118,7 +84,7 @@ func (watcher *AbstractWatcher) LatestSyncedBlockNum() uint64 {
 	return b.Number()
 }
 
-func (watcher *AbstractWatcher) Run() error {
+func (watcher *AbstractWatcher) RunTillExit() error {
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
@@ -170,17 +136,7 @@ func (watcher *AbstractWatcher) Run() error {
 
 			return nil
 		default:
-			maxRetryCount := 3
-
-			var latestBlockNum uint64
-			var err error
-
-			for i := 0; i < maxRetryCount; i++ {
-				latestBlockNum, err = watcher.rpc.GetCurrentBlockNum()
-				if err == nil {
-					break
-				}
-			}
+			latestBlockNum, err := watcher.rpc.GetCurrentBlockNum()
 			if err != nil {
 				return err
 			}
@@ -200,14 +156,14 @@ func (watcher *AbstractWatcher) Run() error {
 
 				newBlock, err := watcher.rpc.GetBlockByNum(newBlockNumToSync)
 				if err != nil {
-					panic(err)
+					return err
 				}
 
 				if watcher.FoundFork(newBlock) {
-					fmt.Println("found fork, popping")
+					log.Infoln("found fork, popping")
 					watcher.popBlocksUntilReachMainChain()
 				} else {
-					fmt.Println("adding new block")
+					log.Infoln("adding new block")
 					watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false))
 				}
 			}
@@ -223,12 +179,9 @@ func (watcher *AbstractWatcher) Run() error {
 	}
 }
 
-func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) {
+func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error {
 	watcher.lock.Lock()
 	defer watcher.lock.Unlock()
-
-	watcher.SyncedBlocks.PushBack(block)
-	watcher.NewBlockChan <- block
 
 	// get tx receipts in block, which is time consuming
 	signals := make([]*SyncSignal, 0, len(block.GetTransactions()))
@@ -240,24 +193,19 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) {
 		signals = append(signals, sig)
 
 		go func() {
-			var txReceipt sdk.TransactionReceipt
-			var err error
-
-			retry := 3
-			for i := 0; i <= retry; i++ {
-				txReceipt, err = watcher.rpc.GetTransactionReceipt(tx.GetHash())
-				if err == nil {
-					break
-				}
-			}
+			txReceipt, err := watcher.rpc.GetTransactionReceipt(tx.GetHash())
 
 			if err != nil {
-				panic(fmt.Sprintf("GetTransactionReceipt fail after %d-times retry, err: %s", retry, err))
+				log.Warnf(fmt.Sprintf("GetTransactionReceipt fail, err: %s", err))
+				sig.err = err
+
+				// one fails all
+				return
 			}
 
 			sig.WaitPermission()
 
-			watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tx, txReceipt, false)
+			sig.rst = structs.NewRemovableTxAndReceipt(tx, txReceipt, false)
 
 			sig.Done()
 		}()
@@ -267,13 +215,29 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) {
 		sig := signals[i]
 		sig.Permit()
 		sig.WaitDone()
+
+		if sig.err != nil {
+			return sig.err
+		}
 	}
+
+	for i := 0; i < len(signals); i++ {
+		watcher.NewTxAndReceiptChan <- signals[i].rst
+	}
+
+	// block
+	watcher.SyncedBlocks.PushBack(block)
+	watcher.NewBlockChan <- block
+
+	return nil
 }
 
 type SyncSignal struct {
 	name       string
 	permission chan bool
 	jobDone    chan bool
+	rst        *structs.RemovableTxAndReceipt
+	err        error
 }
 
 func newSyncSignal(name string) *SyncSignal {

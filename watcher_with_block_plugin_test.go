@@ -6,7 +6,6 @@ import (
 	"github.com/HydroProtocol/nights-watch/plugin"
 	"github.com/HydroProtocol/nights-watch/structs"
 	"testing"
-	"time"
 )
 
 func TestNewBlockNumPlugin(t *testing.T) {
@@ -17,9 +16,7 @@ func TestNewBlockNumPlugin(t *testing.T) {
 		fmt.Println(">>", i, b)
 	}))
 
-	w.Run()
-
-	time.Sleep(60 * time.Second)
+	w.RunTillExit()
 }
 
 func TestSimpleBlockPlugin(t *testing.T) {
@@ -30,7 +27,5 @@ func TestSimpleBlockPlugin(t *testing.T) {
 		fmt.Println(">>", block, block.IsRemoved)
 	}))
 
-	w.Run()
-
-	time.Sleep(60 * time.Second)
+	w.RunTillExit()
 }
