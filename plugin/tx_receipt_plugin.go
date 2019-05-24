@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
 	"github.com/HydroProtocol/nights-watch/structs"
 	"math/big"
@@ -11,6 +12,23 @@ import (
 
 type ITxReceiptPlugin interface {
 	Accept(tx *structs.RemovableTxAndReceipt)
+}
+
+type TxReceiptPluginWithFilter struct {
+	ITxReceiptPlugin
+	filterFunc func(transaction sdk.Transaction) bool
+}
+
+func (p TxReceiptPluginWithFilter) NeedReceipt(tx sdk.Transaction) bool {
+	return p.filterFunc(tx)
+}
+
+func NewTxReceiptPluginWithFilter(
+	callback func(tx *structs.RemovableTxAndReceipt),
+	filterFunc func(transaction sdk.Transaction) bool) *TxReceiptPluginWithFilter {
+
+	p := NewTxReceiptPlugin(callback)
+	return &TxReceiptPluginWithFilter{p, filterFunc}
 }
 
 type TxReceiptPlugin struct {

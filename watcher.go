@@ -56,6 +56,7 @@ func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
 		NewBlockChan:        make(chan *structs.RemovableBlock, 32),
 		NewTxAndReceiptChan: make(chan *structs.RemovableTxAndReceipt, 518),
 		SyncedBlocks:        list.New(),
+		SyncedTxAndReceipts: list.New(),
 	}
 }
 
@@ -119,7 +120,14 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 			for i := 0; i < len(txReceiptPlugins); i++ {
 				txReceiptPlugin := txReceiptPlugins[i]
 
-				txReceiptPlugin.Accept(structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, false))
+				if p, ok := txReceiptPlugin.(plugin.TxReceiptPluginWithFilter); ok {
+					// for filter plugin, only feed receipt it wants
+					if p.NeedReceipt(tuple.Tx) {
+						txReceiptPlugin.Accept(structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, false))
+					}
+				} else {
+					txReceiptPlugin.Accept(structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, false))
+				}
 			}
 		}
 
@@ -160,11 +168,16 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 				}
 
 				if watcher.FoundFork(newBlock) {
+					//todo seems blocked, bug?
 					log.Infoln("found fork, popping")
-					watcher.popBlocksUntilReachMainChain()
+					err = watcher.popBlocksUntilReachMainChain()
 				} else {
 					log.Infoln("adding new block")
-					watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false))
+					err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false))
+				}
+
+				if err != nil {
+					return err
 				}
 			}
 
@@ -179,6 +192,26 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 	}
 }
 
+// go thru plugins to check if this watcher need fetch receipt for tx
+// network load for fetching receipts per tx is heavy,
+// we use this method to make sure we only do the work we need to do
+func (watcher *AbstractWatcher) needReceipt(tx sdk.Transaction) bool {
+	plugins := watcher.TxReceiptPlugins
+
+	for _, p := range plugins {
+		if filterPlugin, ok := p.(plugin.TxReceiptPluginWithFilter); ok {
+			if filterPlugin.NeedReceipt(tx) {
+				return true
+			}
+		} else {
+			// exist global tx-receipt listener
+			return true
+		}
+	}
+
+	return false
+}
+
 func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error {
 	watcher.lock.Lock()
 	defer watcher.lock.Unlock()
@@ -187,6 +220,12 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 	signals := make([]*SyncSignal, 0, len(block.GetTransactions()))
 	for i := 0; i < len(block.GetTransactions()); i++ {
 		tx := block.GetTransactions()[i]
+
+		if !watcher.needReceipt(tx) {
+			log.Debugf("ignored tx: %s", tx.GetHash())
+			continue
+		}
+
 		syncSigName := fmt.Sprintf("B:%d T:%s", block.Number(), tx.GetHash())
 
 		sig := newSyncSignal(syncSigName)
@@ -264,22 +303,22 @@ func (s *SyncSignal) WaitDone() {
 	<-s.jobDone
 }
 
-func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() {
-	watcher.lock.Lock()
-	defer watcher.lock.Unlock()
+func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
+	//watcher.lock.Lock()
+	//defer watcher.lock.Unlock()
 
 	for {
 		log.Debug("check tail block:", watcher.SyncedBlocks.Back())
 		if watcher.SyncedBlocks.Back() == nil {
-			return
+			return nil
 		}
 
 		block, err := watcher.rpc.GetBlockByNum(watcher.LatestSyncedBlockNum())
 		if err != nil {
-			continue
+			return err
 		}
 
-		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(structs.RemovableBlock)
+		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(*structs.RemovableBlock)
 
 		if block.Hash() != lastSyncedBlock.Hash() {
 			log.Debug("removing tail block:", watcher.SyncedBlocks.Back())
@@ -291,7 +330,7 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() {
 			watcher.NewBlockChan <- structs.NewRemovableBlock(removedBlock, true)
 			watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
 		} else {
-			return
+			return nil
 		}
 	}
 }
@@ -304,7 +343,9 @@ func (watcher *AbstractWatcher) FoundFork(newBlock sdk.Block) bool {
 			notMatch := (syncedBlock).Hash() != newBlock.ParentHash()
 
 			if notMatch {
-				log.Debugf("found fork, new block(%d): %s, new block's parent: %s, parent we synced: %s",
+				log.Warnf("found fork, new block(%d): %s, new block's parent: %s, parent we synced: %s",
+					newBlock.Number(), newBlock.Hash(), newBlock.ParentHash(), syncedBlock.Hash())
+				fmt.Printf("found fork, new block(%d): %s, new block's parent: %s, parent we synced: %s",
 					newBlock.Number(), newBlock.Hash(), newBlock.ParentHash(), syncedBlock.Hash())
 
 				return true
