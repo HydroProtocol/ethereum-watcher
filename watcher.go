@@ -8,7 +8,6 @@ import (
 	"github.com/HydroProtocol/nights-watch/plugin"
 	"github.com/HydroProtocol/nights-watch/rpc"
 	"github.com/HydroProtocol/nights-watch/structs"
-	"github.com/prometheus/common/log"
 	"sync"
 	"time"
 )
@@ -28,14 +27,11 @@ import (
 type AbstractWatcher struct {
 	//IWatcher
 
-	//API  string
-	//rpc  *ethrpc.EthRPC
 	rpc rpc.IBlockChainRPC
 
 	Ctx  context.Context
 	lock sync.RWMutex
 
-	//change to pointer element in chan
 	NewBlockChan        chan *structs.RemovableBlock
 	NewTxAndReceiptChan chan *structs.RemovableTxAndReceipt
 
@@ -72,20 +68,14 @@ func (watcher *AbstractWatcher) RegisterTxReceiptPlugin(plugin plugin.ITxReceipt
 	watcher.TxReceiptPlugins = append(watcher.TxReceiptPlugins, plugin)
 }
 
-func (watcher *AbstractWatcher) LatestSyncedBlockNum() uint64 {
-	watcher.lock.RLock()
-	defer watcher.lock.RUnlock()
-
-	if watcher.SyncedBlocks.Len() <= 0 {
-		return 0
-	}
-
-	b := watcher.SyncedBlocks.Back().Value.(sdk.Block)
-
-	return b.Number()
+// start sync from latest block
+func (watcher *AbstractWatcher) RunTillExit() error {
+	return watcher.RunTillExitFromBlock(0)
 }
 
-func (watcher *AbstractWatcher) RunTillExit() error {
+// start sync from given block
+// 0 means start from latest block
+func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error {
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
@@ -115,18 +105,19 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 
 	wg.Add(1)
 	go func() {
-		for tuple := range watcher.NewTxAndReceiptChan {
+		for removableTxAndReceipt := range watcher.NewTxAndReceiptChan {
+
 			txReceiptPlugins := watcher.TxReceiptPlugins
 			for i := 0; i < len(txReceiptPlugins); i++ {
 				txReceiptPlugin := txReceiptPlugins[i]
 
-				if p, ok := txReceiptPlugin.(plugin.TxReceiptPluginWithFilter); ok {
+				if p, ok := txReceiptPlugin.(*plugin.TxReceiptPluginWithFilter); ok {
 					// for filter plugin, only feed receipt it wants
-					if p.NeedReceipt(tuple.Tx) {
-						txReceiptPlugin.Accept(structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, false))
+					if p.NeedReceipt(removableTxAndReceipt.Tx) {
+						txReceiptPlugin.Accept(removableTxAndReceipt)
 					}
 				} else {
-					txReceiptPlugin.Accept(structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, false))
+					txReceiptPlugin.Accept(removableTxAndReceipt)
 				}
 			}
 		}
@@ -149,7 +140,9 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 				return err
 			}
 
-			fmt.Println("latestBlockNum", latestBlockNum)
+			if startBlockNum <= 0 {
+				startBlockNum = latestBlockNum
+			}
 
 			noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
 
@@ -157,7 +150,7 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 			for watcher.LatestSyncedBlockNum() < latestBlockNum {
 				var newBlockNumToSync uint64
 				if watcher.LatestSyncedBlockNum() <= 0 {
-					newBlockNumToSync = latestBlockNum
+					newBlockNumToSync = startBlockNum
 				} else {
 					newBlockNumToSync = watcher.LatestSyncedBlockNum() + 1
 				}
@@ -169,10 +162,10 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 
 				if watcher.FoundFork(newBlock) {
 					//todo seems blocked, bug?
-					log.Infoln("found fork, popping")
+					fmt.Println("found fork, popping")
 					err = watcher.popBlocksUntilReachMainChain()
 				} else {
-					log.Infoln("adding new block")
+					fmt.Println("adding new block")
 					err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false))
 				}
 
@@ -192,9 +185,22 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 	}
 }
 
+func (watcher *AbstractWatcher) LatestSyncedBlockNum() uint64 {
+	watcher.lock.RLock()
+	defer watcher.lock.RUnlock()
+
+	if watcher.SyncedBlocks.Len() <= 0 {
+		return 0
+	}
+
+	b := watcher.SyncedBlocks.Back().Value.(sdk.Block)
+
+	return b.Number()
+}
+
 // go thru plugins to check if this watcher need fetch receipt for tx
 // network load for fetching receipts per tx is heavy,
-// we use this method to make sure we only do the work we need to do
+// we use this method to make sure we only do the work we need
 func (watcher *AbstractWatcher) needReceipt(tx sdk.Transaction) bool {
 	plugins := watcher.TxReceiptPlugins
 
@@ -222,7 +228,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 		tx := block.GetTransactions()[i]
 
 		if !watcher.needReceipt(tx) {
-			log.Debugf("ignored tx: %s", tx.GetHash())
+			fmt.Printf("ignored tx: %s", tx.GetHash())
 			continue
 		}
 
@@ -235,7 +241,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 			txReceipt, err := watcher.rpc.GetTransactionReceipt(tx.GetHash())
 
 			if err != nil {
-				log.Warnf(fmt.Sprintf("GetTransactionReceipt fail, err: %s", err))
+				fmt.Printf("GetTransactionReceipt fail, err: %s", err)
 				sig.err = err
 
 				// one fails all
@@ -261,11 +267,12 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 	}
 
 	for i := 0; i < len(signals); i++ {
+		watcher.SyncedTxAndReceipts.PushBack(signals[i].rst.TxAndReceipt)
 		watcher.NewTxAndReceiptChan <- signals[i].rst
 	}
 
 	// block
-	watcher.SyncedBlocks.PushBack(block)
+	watcher.SyncedBlocks.PushBack(block.Block)
 	watcher.NewBlockChan <- block
 
 	return nil
@@ -304,32 +311,41 @@ func (s *SyncSignal) WaitDone() {
 }
 
 func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
-	//watcher.lock.Lock()
-	//defer watcher.lock.Unlock()
+	fmt.Println("before lock popBlocksUntilReachMainChain")
+	watcher.lock.Lock()
+	defer watcher.lock.Unlock()
+	fmt.Println("after lock popBlocksUntilReachMainChain")
 
 	for {
-		log.Debug("check tail block:", watcher.SyncedBlocks.Back())
+		fmt.Println("check tail block:", watcher.SyncedBlocks.Back())
 		if watcher.SyncedBlocks.Back() == nil {
 			return nil
 		}
 
-		block, err := watcher.rpc.GetBlockByNum(watcher.LatestSyncedBlockNum())
+		fmt.Println("1")
+		// NOTE: instead of watcher.LatestSyncedBlockNum() cuz it has lock
+		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(sdk.Block)
+		block, err := watcher.rpc.GetBlockByNum(lastSyncedBlock.Number())
 		if err != nil {
 			return err
 		}
 
-		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(*structs.RemovableBlock)
-
+		fmt.Println("3")
 		if block.Hash() != lastSyncedBlock.Hash() {
-			log.Debug("removing tail block:", watcher.SyncedBlocks.Back())
+			fmt.Println("4")
+			fmt.Println("removing tail block:", watcher.SyncedBlocks.Back())
 			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(sdk.Block)
 
-			log.Debug("removing tail txAndReceipt:", watcher.SyncedTxAndReceipts.Back())
+			fmt.Println("removing tail txAndReceipt:", watcher.SyncedTxAndReceipts.Back())
 			tuple := watcher.SyncedTxAndReceipts.Remove(watcher.SyncedTxAndReceipts.Back()).(*structs.TxAndReceipt)
 
+			fmt.Println("5")
 			watcher.NewBlockChan <- structs.NewRemovableBlock(removedBlock, true)
+			fmt.Println("6")
 			watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
+			fmt.Println("7")
 		} else {
+			fmt.Println("44")
 			return nil
 		}
 	}
@@ -343,8 +359,6 @@ func (watcher *AbstractWatcher) FoundFork(newBlock sdk.Block) bool {
 			notMatch := (syncedBlock).Hash() != newBlock.ParentHash()
 
 			if notMatch {
-				log.Warnf("found fork, new block(%d): %s, new block's parent: %s, parent we synced: %s",
-					newBlock.Number(), newBlock.Hash(), newBlock.ParentHash(), syncedBlock.Hash())
 				fmt.Printf("found fork, new block(%d): %s, new block's parent: %s, parent we synced: %s",
 					newBlock.Number(), newBlock.Hash(), newBlock.ParentHash(), syncedBlock.Hash())
 

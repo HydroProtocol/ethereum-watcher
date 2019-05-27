@@ -8,6 +8,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/jarcoal/httpmock v1.0.4 // indirect
+	github.com/labstack/gommon v0.2.8
 	github.com/onrik/ethrpc v0.0.0-20190305112807-6b8e9c0e9a8f
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
