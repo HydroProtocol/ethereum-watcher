@@ -37,6 +37,7 @@ type AbstractWatcher struct {
 
 	SyncedBlocks        *list.List
 	SyncedTxAndReceipts *list.List
+	MaxSynedBlockToKeep int
 
 	BlockPlugins     []plugin.IBlockPlugin
 	TxPlugins        []plugin.ITxPlugin
@@ -53,6 +54,7 @@ func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
 		NewTxAndReceiptChan: make(chan *structs.RemovableTxAndReceipt, 518),
 		SyncedBlocks:        list.New(),
 		SyncedTxAndReceipts: list.New(),
+		MaxSynedBlockToKeep: 64,
 	}
 }
 
@@ -161,7 +163,6 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 				}
 
 				if watcher.FoundFork(newBlock) {
-					//todo seems blocked, bug?
 					fmt.Println("found fork, popping")
 					err = watcher.popBlocksUntilReachMainChain()
 				} else {
@@ -269,6 +270,23 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 	for i := 0; i < len(signals); i++ {
 		watcher.SyncedTxAndReceipts.PushBack(signals[i].rst.TxAndReceipt)
 		watcher.NewTxAndReceiptChan <- signals[i].rst
+	}
+
+	// clean synced data
+	for watcher.SyncedBlocks.Len() >= watcher.MaxSynedBlockToKeep {
+		// clean block
+		b := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Front()).(sdk.Block)
+
+		// clean txAndReceipt
+		for watcher.SyncedTxAndReceipts.Front() != nil {
+			head := watcher.SyncedTxAndReceipts.Front()
+
+			if head.Value.(*structs.TxAndReceipt).Tx.GetBlockNumber() <= b.Number() {
+				watcher.SyncedTxAndReceipts.Remove(head)
+			} else {
+				break
+			}
+		}
 	}
 
 	// block
