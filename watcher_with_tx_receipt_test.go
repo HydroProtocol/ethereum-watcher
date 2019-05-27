@@ -73,8 +73,9 @@ func TestFilterPluginForDyDxApprove(t *testing.T) {
 		for _, log := range receipt.GetLogs() {
 			if len(log.Topics) == 3 &&
 				log.Topics[0] == "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925" &&
-				log.Topics[1] == "0x0000000000000000000000001e0447b19bb6ecfdae1e4ae1694b0c3659614e4e" {
-				fmt.Printf("approving to dydx, tx: %s\n", txAndReceipt.Tx.GetHash())
+				log.Topics[2] == "0x0000000000000000000000001e0447b19bb6ecfdae1e4ae1694b0c3659614e4e" {
+				fmt.Println(log.Topics[1])
+				fmt.Printf(">> approving to dydx, tx: %s\n", txAndReceipt.Tx.GetHash())
 			}
 		}
 	}
@@ -86,7 +87,7 @@ func TestFilterPluginForDyDxApprove(t *testing.T) {
 
 	w.RegisterTxReceiptPlugin(plugin.NewTxReceiptPluginWithFilter(callback, filterFunc))
 
-	err := w.RunTillExitFromBlock(0)
+	err := w.RunTillExitFromBlock(7839853)
 	if err != nil {
 		fmt.Println("RunTillExit with err:", err)
 	}

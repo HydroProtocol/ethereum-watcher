@@ -336,14 +336,24 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 			fmt.Println("removing tail block:", watcher.SyncedBlocks.Back())
 			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(sdk.Block)
 
-			fmt.Println("removing tail txAndReceipt:", watcher.SyncedTxAndReceipts.Back())
-			tuple := watcher.SyncedTxAndReceipts.Remove(watcher.SyncedTxAndReceipts.Back()).(*structs.TxAndReceipt)
+			for watcher.SyncedTxAndReceipts.Back() != nil {
+
+				tail := watcher.SyncedTxAndReceipts.Back()
+
+				if tail.Value.(*structs.TxAndReceipt).Tx.GetBlockNumber() >= removedBlock.Number() {
+					fmt.Println("removing tail txAndReceipt:", tail)
+					tuple := watcher.SyncedTxAndReceipts.Remove(tail).(*structs.TxAndReceipt)
+
+					fmt.Println("6")
+					watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
+					fmt.Println("7")
+				} else {
+					break
+				}
+			}
 
 			fmt.Println("5")
 			watcher.NewBlockChan <- structs.NewRemovableBlock(removedBlock, true)
-			fmt.Println("6")
-			watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
-			fmt.Println("7")
 		} else {
 			fmt.Println("44")
 			return nil
