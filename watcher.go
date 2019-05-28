@@ -166,7 +166,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 					fmt.Println("found fork, popping")
 					err = watcher.popBlocksUntilReachMainChain()
 				} else {
-					fmt.Println("adding new block")
+					fmt.Println("adding new block:", newBlock.Number())
 					err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false))
 				}
 
@@ -329,18 +329,14 @@ func (s *SyncSignal) WaitDone() {
 }
 
 func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
-	fmt.Println("before lock popBlocksUntilReachMainChain")
 	watcher.lock.Lock()
 	defer watcher.lock.Unlock()
-	fmt.Println("after lock popBlocksUntilReachMainChain")
 
 	for {
-		fmt.Println("check tail block:", watcher.SyncedBlocks.Back())
 		if watcher.SyncedBlocks.Back() == nil {
 			return nil
 		}
 
-		fmt.Println("1")
 		// NOTE: instead of watcher.LatestSyncedBlockNum() cuz it has lock
 		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(sdk.Block)
 		block, err := watcher.rpc.GetBlockByNum(lastSyncedBlock.Number())
@@ -348,9 +344,7 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 			return err
 		}
 
-		fmt.Println("3")
 		if block.Hash() != lastSyncedBlock.Hash() {
-			fmt.Println("4")
 			fmt.Println("removing tail block:", watcher.SyncedBlocks.Back())
 			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(sdk.Block)
 
@@ -362,19 +356,15 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 					fmt.Printf("removing tail txAndReceipt: %+v", tail.Value)
 					tuple := watcher.SyncedTxAndReceipts.Remove(tail).(*structs.TxAndReceipt)
 
-					fmt.Println("6")
 					watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
-					fmt.Println("7")
 				} else {
 					fmt.Printf("all txAndReceipts removed for block: %+v", removedBlock)
 					break
 				}
 			}
 
-			fmt.Println("5")
 			watcher.NewBlockChan <- structs.NewRemovableBlock(removedBlock, true)
 		} else {
-			fmt.Println("44")
 			return nil
 		}
 	}

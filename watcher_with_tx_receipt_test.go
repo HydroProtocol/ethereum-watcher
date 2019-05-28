@@ -45,7 +45,7 @@ func TestFilterPlugin(t *testing.T) {
 	w := NewHttpBasedEthWatcher(context.Background(), api)
 
 	callback := func(txAndReceipt *structs.RemovableTxAndReceipt) {
-		fmt.Printf("tx: %s\n", txAndReceipt.Tx.GetHash())
+		fmt.Println("tx:", txAndReceipt.Tx.GetHash())
 	}
 
 	// only accept txs which end with: f
@@ -75,7 +75,6 @@ func TestFilterPluginForDyDxApprove(t *testing.T) {
 			if len(topics) == 3 &&
 				topics[0] == "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925" &&
 				topics[2] == "0x0000000000000000000000001e0447b19bb6ecfdae1e4ae1694b0c3659614e4e" {
-				fmt.Println(topics[1])
 				fmt.Printf(">> approving to dydx, tx: %s\n", txAndReceipt.Tx.GetHash())
 			}
 		}
@@ -88,7 +87,7 @@ func TestFilterPluginForDyDxApprove(t *testing.T) {
 
 	w.RegisterTxReceiptPlugin(plugin.NewTxReceiptPluginWithFilter(callback, filterFunc))
 
-	err := w.RunTillExitFromBlock(7839853)
+	err := w.RunTillExitFromBlock(7844853)
 	if err != nil {
 		fmt.Println("RunTillExit with err:", err)
 	}
