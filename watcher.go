@@ -359,13 +359,14 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 				tail := watcher.SyncedTxAndReceipts.Back()
 
 				if tail.Value.(*structs.TxAndReceipt).Tx.GetBlockNumber() >= removedBlock.Number() {
-					fmt.Println("removing tail txAndReceipt:", tail)
+					fmt.Printf("removing tail txAndReceipt: %+v", tail.Value)
 					tuple := watcher.SyncedTxAndReceipts.Remove(tail).(*structs.TxAndReceipt)
 
 					fmt.Println("6")
 					watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
 					fmt.Println("7")
 				} else {
+					fmt.Printf("all txAndReceipts removed for block: %+v", removedBlock)
 					break
 				}
 			}
