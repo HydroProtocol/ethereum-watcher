@@ -22,15 +22,17 @@ type TxAndReceipt struct {
 type RemovableTxAndReceipt struct {
 	*TxAndReceipt
 	IsRemoved bool
+	TimeStamp uint64
 }
 
-func NewRemovableTxAndReceipt(tx sdk.Transaction, receipt sdk.TransactionReceipt, removed bool) *RemovableTxAndReceipt {
+func NewRemovableTxAndReceipt(tx sdk.Transaction, receipt sdk.TransactionReceipt, removed bool, timeStamp uint64) *RemovableTxAndReceipt {
 	return &RemovableTxAndReceipt{
 		&TxAndReceipt{
 			tx,
 			receipt,
 		},
 		removed,
+		timeStamp,
 	}
 }
 

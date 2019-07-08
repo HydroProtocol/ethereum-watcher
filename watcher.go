@@ -251,7 +251,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 
 			sig.WaitPermission()
 
-			sig.rst = structs.NewRemovableTxAndReceipt(tx, txReceipt, false)
+			sig.rst = structs.NewRemovableTxAndReceipt(tx, txReceipt, false, block.Timestamp())
 
 			sig.Done()
 		}()
@@ -356,7 +356,7 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 					fmt.Printf("removing tail txAndReceipt: %+v", tail.Value)
 					tuple := watcher.SyncedTxAndReceipts.Remove(tail).(*structs.TxAndReceipt)
 
-					watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true)
+					watcher.NewTxAndReceiptChan <- structs.NewRemovableTxAndReceipt(tuple.Tx, tuple.Receipt, true, block.Timestamp())
 				} else {
 					fmt.Printf("all txAndReceipts removed for block: %+v", removedBlock)
 					break
