@@ -54,7 +54,9 @@ func (rpc EthBlockChainRPC) GetLogs(
 	logrus.Debugf("EthGetLogs logs count at block(%d - %d): %d", fromBlockNum, toBlockNum, len(logs))
 
 	var result []sdk.IReceiptLog
-	for _, l := range logs {
+	for i := 0; i < len(logs); i++ {
+		l := logs[i]
+
 		logrus.Debugf("EthGetLogs receipt log: %+v", l)
 
 		result = append(result, ethereum.ReceiptLog{Log: &l})

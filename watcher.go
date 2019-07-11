@@ -124,7 +124,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 	wg.Add(1)
 	go func() {
 		for removableReceiptLog := range watcher.NewReceiptLogChan {
-			logrus.Debugf("get receipt log from chan: %+v", removableReceiptLog)
+			logrus.Debugf("get receipt log from chan: %+v, txHash: %s", removableReceiptLog, removableReceiptLog.IReceiptLog.GetTransactionHash())
 
 			receiptLogsPlugins := watcher.ReceiptLogPlugins
 			for i := 0; i < len(receiptLogsPlugins); i++ {
@@ -319,7 +319,10 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 			return err
 		}
 
-		for _, log := range receiptLogs {
+		for i := 0; i < len(receiptLogs); i++ {
+			log := receiptLogs[i]
+			logrus.Debugln("insert into chan: ", log.GetTransactionHash())
+
 			watcher.NewReceiptLogChan <- &structs.RemovableReceiptLog{
 				IReceiptLog: log,
 				IsRemoved:   block.IsRemoved}

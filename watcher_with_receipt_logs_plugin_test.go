@@ -16,18 +16,19 @@ func TestReceiptLogsPlugin(t *testing.T) {
 	w := NewHttpBasedEthWatcher(context.Background(), api)
 
 	contract := "0x63bB8a255a8c045122EFf28B3093Cc225B711F6D"
-	// Deposit
-	topics := []string{"0x137e5dc9e374ee2e2ceb51a34d187b03b8a1d348da6f35c8519c4f97b720df5f"}
+	// Match
+	topics := []string{"0x6bf96fcc2cec9e08b082506ebbc10114578a497ff1ea436628ba8996b750677c"}
 
 	w.RegisterReceiptLogPlugin(plugin.NewReceiptLogPlugin(contract, topics, func(receipt *structs.RemovableReceiptLog) {
 		if receipt.IsRemoved {
 			logrus.Infof("Removed >> %+v", receipt)
 		} else {
-			logrus.Infof("Adding >> %+v", receipt)
+			logrus.Infof("Adding >> %+v, tx: %s, logIdx: %d", receipt, receipt.IReceiptLog.GetTransactionHash(), receipt.IReceiptLog.GetLogIndex())
 		}
 	}))
 
-	err := w.RunTillExitFromBlock(12147113)
+	startBlock := 12101723
+	err := w.RunTillExitFromBlock(uint64(startBlock))
 
 	fmt.Println("err:", err)
 }

@@ -15,13 +15,13 @@ type IReceiptLogPlugin interface {
 type ReceiptLogPlugin struct {
 	contract string
 	topics   []string
-	callback func(receipt *structs.RemovableReceiptLog)
+	callback func(receiptLog *structs.RemovableReceiptLog)
 }
 
 func NewReceiptLogPlugin(
 	contract string,
 	topics []string,
-	callback func(receipt *structs.RemovableReceiptLog),
+	callback func(receiptLog *structs.RemovableReceiptLog),
 ) *ReceiptLogPlugin {
 	return &ReceiptLogPlugin{
 		contract: contract,
