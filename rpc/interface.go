@@ -7,4 +7,6 @@ type IBlockChainRPC interface {
 
 	GetBlockByNum(uint64) (sdk.Block, error)
 	GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error)
+
+	GetLogs(from, to uint64, address string, topics []string) ([]sdk.IReceiptLog, error)
 }
