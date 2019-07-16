@@ -54,3 +54,19 @@ func (rpc EthBlockChainRPCWithRetry) GetCurrentBlockNum() (rst uint64, err error
 
 	return
 }
+func (rpc EthBlockChainRPCWithRetry) GetLogs(
+	fromBlockNum, toBlockNum uint64,
+	address string,
+	topics []string,
+) (rst []sdk.IReceiptLog, err error) {
+	for i := 0; i <= rpc.maxRetryTimes; i++ {
+		rst, err = rpc.EthBlockChainRPC.GetLogs(fromBlockNum, toBlockNum, address, topics)
+		if err == nil {
+			break
+		} else {
+			time.Sleep(time.Duration(500*(i+1)) * time.Millisecond)
+		}
+	}
+
+	return
+}

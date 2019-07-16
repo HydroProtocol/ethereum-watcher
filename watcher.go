@@ -3,6 +3,7 @@ package nights_watch
 import (
 	"container/list"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
 	"github.com/HydroProtocol/nights-watch/plugin"
@@ -181,6 +182,11 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 					return err
 				}
 
+				if newBlock == nil {
+					msg := fmt.Sprintf("GetBlockByNum(%d) returns nil block", newBlockNumToSync)
+					return errors.New(msg)
+				}
+
 				if watcher.FoundFork(newBlock) {
 					logrus.Infoln("found fork, popping")
 					err = watcher.popBlocksUntilReachMainChain()
@@ -325,7 +331,9 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 
 			watcher.NewReceiptLogChan <- &structs.RemovableReceiptLog{
 				IReceiptLog: log,
-				IsRemoved:   block.IsRemoved}
+				Block:       block.Block,
+				IsRemoved:   block.IsRemoved,
+			}
 		}
 	}
 
@@ -431,7 +439,17 @@ func (watcher *AbstractWatcher) FoundFork(newBlock sdk.Block) bool {
 	for e := watcher.SyncedBlocks.Back(); e != nil; e = e.Prev() {
 		syncedBlock := e.Value.(sdk.Block)
 
-		if (syncedBlock).Number()+1 == newBlock.Number() {
+		//if syncedBlock == nil {
+		//	logrus.Warnln("error, syncedBlock is nil")
+		//}
+		//logrus.Debugf("syncedBlock: %+v", syncedBlock)
+
+		//if newBlock == nil {
+		//	logrus.Warnln("error, newBlock is nil")
+		//}
+		//logrus.Debugf("newBlock: %+v", newBlock)
+
+		if syncedBlock.Number()+1 == newBlock.Number() {
 			notMatch := (syncedBlock).Hash() != newBlock.ParentHash()
 
 			if notMatch {

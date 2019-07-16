@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
@@ -21,12 +22,26 @@ func NewEthRPC(api string) *EthBlockChainRPC {
 
 func (rpc EthBlockChainRPC) GetBlockByNum(num uint64) (sdk.Block, error) {
 	b, err := rpc.rpcImpl.EthGetBlockByNumber(int(num), true)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, errors.New("nil block")
+	}
+
 	return &ethereum.EthereumBlock{b}, err
 }
 
 func (rpc EthBlockChainRPC) GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error) {
-	receipt, error := rpc.rpcImpl.EthGetTransactionReceipt(txHash)
-	return &ethereum.EthereumTransactionReceipt{receipt}, error
+	receipt, err := rpc.rpcImpl.EthGetTransactionReceipt(txHash)
+	if err != nil {
+		return nil, err
+	}
+	if receipt == nil {
+		return nil, errors.New("nil receipt")
+	}
+
+	return &ethereum.EthereumTransactionReceipt{receipt}, err
 }
 
 func (rpc EthBlockChainRPC) GetCurrentBlockNum() (uint64, error) {

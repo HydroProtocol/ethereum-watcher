@@ -27,6 +27,7 @@ type RemovableTxAndReceipt struct {
 
 type RemovableReceiptLog struct {
 	sdk.IReceiptLog
+	sdk.Block
 	IsRemoved bool
 }
 
