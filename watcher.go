@@ -146,30 +146,31 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 	}()
 
 	for {
-		select {
-		case <-watcher.Ctx.Done():
-			close(watcher.NewBlockChan)
-			close(watcher.NewTxAndReceiptChan)
-			close(watcher.NewReceiptLogChan)
+		latestBlockNum, err := watcher.rpc.GetCurrentBlockNum()
+		if err != nil {
+			return err
+		}
 
-			wg.Wait()
+		if startBlockNum <= 0 {
+			startBlockNum = latestBlockNum
+		}
 
-			return nil
-		default:
-			latestBlockNum, err := watcher.rpc.GetCurrentBlockNum()
-			if err != nil {
-				return err
-			}
+		noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
+		logrus.Infoln("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
 
-			if startBlockNum <= 0 {
-				startBlockNum = latestBlockNum
-			}
+		for watcher.LatestSyncedBlockNum() < latestBlockNum {
+			select {
+			case <-watcher.Ctx.Done():
+				logrus.Info("watcher context down, closing channels to exit...")
+				close(watcher.NewBlockChan)
+				close(watcher.NewTxAndReceiptChan)
+				close(watcher.NewReceiptLogChan)
 
-			noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
+				wg.Wait()
 
-			logrus.Infoln("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
-
-			for watcher.LatestSyncedBlockNum() < latestBlockNum {
+				logrus.Info("watcher done!")
+				return nil
+			default:
 				var newBlockNumToSync uint64
 				if watcher.LatestSyncedBlockNum() <= 0 {
 					newBlockNumToSync = startBlockNum
@@ -200,6 +201,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 				if err != nil {
 					return err
 				}
+
 			}
 
 			if noNewBlockForSync {
