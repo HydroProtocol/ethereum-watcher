@@ -10,7 +10,7 @@ import (
 )
 
 func TestReceiptLogsPlugin(t *testing.T) {
-	logrus.SetLevel(logrus.InfoLevel)
+	logrus.SetLevel(logrus.DebugLevel)
 
 	api := "https://kovan.infura.io/v3/19d753b2600445e292d54b1ef58d4df4"
 	w := NewHttpBasedEthWatcher(context.Background(), api)
@@ -27,6 +27,7 @@ func TestReceiptLogsPlugin(t *testing.T) {
 		}
 	}))
 
+	//startBlock := 12304546
 	startBlock := 12101723
 	err := w.RunTillExitFromBlock(uint64(startBlock))
 

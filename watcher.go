@@ -32,6 +32,8 @@ type AbstractWatcher struct {
 	TxPlugins         []plugin.ITxPlugin
 	TxReceiptPlugins  []plugin.ITxReceiptPlugin
 	ReceiptLogPlugins []plugin.IReceiptLogPlugin
+
+	ReceiptCatchUpFromBlock uint64
 }
 
 func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
@@ -192,7 +194,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 					err = watcher.popBlocksUntilReachMainChain()
 				} else {
 					logrus.Infoln("adding new block:", newBlock.Number())
-					err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false))
+					err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false), latestBlockNum)
 				}
 
 				if err != nil {
@@ -261,7 +263,7 @@ func (watcher *AbstractWatcher) getReceiptLogQueryMap() (queryMap map[string][]s
 	return
 }
 
-func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error {
+func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHighestBlockNum uint64) error {
 	watcher.lock.Lock()
 	defer watcher.lock.Unlock()
 
@@ -319,20 +321,45 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 	queryMap := watcher.getReceiptLogQueryMap()
 	logrus.Debugln("getReceiptLogQueryMap:", queryMap)
 
-	for k, v := range queryMap {
-		receiptLogs, err := watcher.rpc.GetLogs(block.Number(), block.Number(), k, v)
-		if err != nil {
-			return err
+	bigStep := uint64(50)
+	if curHighestBlockNum-block.Number() > bigStep {
+		// only do request with bigStep
+		if watcher.ReceiptCatchUpFromBlock == 0 {
+			// init
+			logrus.Debugf("bigStep, init to %d", block.Number())
+			watcher.ReceiptCatchUpFromBlock = block.Number()
+		} else {
+			// check if we need do requests
+			if (block.Number() - watcher.ReceiptCatchUpFromBlock + 1) == bigStep {
+				fromBlock := watcher.ReceiptCatchUpFromBlock
+				toBlock := block.Number()
+
+				logrus.Debugf("bigStep, doing request, range: %d -> %d (minus: %d)", fromBlock, toBlock, block.Number()-watcher.ReceiptCatchUpFromBlock)
+
+				for k, v := range queryMap {
+					err := watcher.fetchReceiptLogs(false, block, fromBlock, toBlock, k, v)
+					if err != nil {
+						return err
+					}
+				}
+
+				// update catch up block
+				watcher.ReceiptCatchUpFromBlock = block.Number() + 1
+			} else {
+				logrus.Debugf("bigStep, holding %d blocks: %d -> %d", block.Number()-watcher.ReceiptCatchUpFromBlock+1, watcher.ReceiptCatchUpFromBlock, block.Number())
+			}
+		}
+	} else {
+		// reset
+		if watcher.ReceiptCatchUpFromBlock != 0 {
+			logrus.Debugf("exit bigStep mode, ReceiptCatchUpFromBlock: %d, curBlock: %d, gap: %d", watcher.ReceiptCatchUpFromBlock, block.Number(), curHighestBlockNum-block.Number())
+			watcher.ReceiptCatchUpFromBlock = 0
 		}
 
-		for i := 0; i < len(receiptLogs); i++ {
-			log := receiptLogs[i]
-			logrus.Debugln("insert into chan: ", log.GetTransactionHash())
-
-			watcher.NewReceiptLogChan <- &structs.RemovableReceiptLog{
-				IReceiptLog: log,
-				Block:       block.Block,
-				IsRemoved:   block.IsRemoved,
+		for k, v := range queryMap {
+			err := watcher.fetchReceiptLogs(block.IsRemoved, block, block.Number(), block.Number(), k, v)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -357,6 +384,27 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock) error
 	// block
 	watcher.SyncedBlocks.PushBack(block.Block)
 	watcher.NewBlockChan <- block
+
+	return nil
+}
+
+func (watcher *AbstractWatcher) fetchReceiptLogs(isRemoved bool, block sdk.Block, from, to uint64, address string, topics []string) error {
+
+	receiptLogs, err := watcher.rpc.GetLogs(from, to, address, topics)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(receiptLogs); i++ {
+		log := receiptLogs[i]
+		logrus.Debugln("insert into chan: ", log.GetTransactionHash())
+
+		watcher.NewReceiptLogChan <- &structs.RemovableReceiptLog{
+			IReceiptLog: log,
+			Block:       block,
+			IsRemoved:   isRemoved,
+		}
+	}
 
 	return nil
 }
