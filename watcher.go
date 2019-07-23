@@ -403,7 +403,6 @@ func (watcher *AbstractWatcher) fetchReceiptLogs(isRemoved bool, block sdk.Block
 
 		watcher.NewReceiptLogChan <- &structs.RemovableReceiptLog{
 			IReceiptLog: log,
-			Block:       block,
 			IsRemoved:   isRemoved,
 		}
 	}
