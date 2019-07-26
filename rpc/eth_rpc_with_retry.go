@@ -29,6 +29,19 @@ func (rpc EthBlockChainRPCWithRetry) GetBlockByNum(num uint64) (rst sdk.Block, e
 	return
 }
 
+func (rpc EthBlockChainRPCWithRetry) GetLiteBlockByNum(num uint64) (rst sdk.Block, err error) {
+	for i := 0; i <= rpc.maxRetryTimes; i++ {
+		rst, err = rpc.EthBlockChainRPC.GetLiteBlockByNum(num)
+		if err == nil {
+			break
+		} else {
+			time.Sleep(time.Duration(500*(i+1)) * time.Millisecond)
+		}
+	}
+
+	return
+}
+
 func (rpc EthBlockChainRPCWithRetry) GetTransactionReceipt(txHash string) (rst sdk.TransactionReceipt, err error) {
 	for i := 0; i <= rpc.maxRetryTimes; i++ {
 		rst, err = rpc.EthBlockChainRPC.GetTransactionReceipt(txHash)

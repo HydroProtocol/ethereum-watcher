@@ -21,7 +21,15 @@ func NewEthRPC(api string) *EthBlockChainRPC {
 }
 
 func (rpc EthBlockChainRPC) GetBlockByNum(num uint64) (sdk.Block, error) {
-	b, err := rpc.rpcImpl.EthGetBlockByNumber(int(num), true)
+	return rpc.getBlockByNum(num, true)
+}
+
+func (rpc EthBlockChainRPC) GetLiteBlockByNum(num uint64) (sdk.Block, error) {
+	return rpc.getBlockByNum(num, false)
+}
+
+func (rpc EthBlockChainRPC) getBlockByNum(num uint64, withTx bool) (sdk.Block, error) {
+	b, err := rpc.rpcImpl.EthGetBlockByNumber(int(num), withTx)
 	if err != nil {
 		return nil, err
 	}
