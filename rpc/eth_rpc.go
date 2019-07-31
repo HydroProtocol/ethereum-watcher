@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"errors"
-	"fmt"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
 	"github.com/onrik/ethrpc"
@@ -63,14 +62,16 @@ func (rpc EthBlockChainRPC) GetLogs(
 	topics []string,
 ) ([]sdk.IReceiptLog, error) {
 
-	logs, err := rpc.rpcImpl.EthGetLogs(ethrpc.FilterParams{
+	filterParam := ethrpc.FilterParams{
 		FromBlock: "0x" + strconv.FormatUint(fromBlockNum, 16),
 		ToBlock:   "0x" + strconv.FormatUint(toBlockNum, 16),
 		Address:   []string{address},
 		Topics:    [][]string{topics},
-	})
+	}
+
+	logs, err := rpc.rpcImpl.EthGetLogs(filterParam)
 	if err != nil {
-		fmt.Println("EthGetLogs err:", err)
+		logrus.Warnf("EthGetLogs err: %s, params: %+v", err, filterParam)
 		return nil, err
 	}
 
