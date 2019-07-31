@@ -40,7 +40,11 @@ func ListenForReceiptLogTillExit(
 				return blockNumToBeProcessedNext - 1
 			}
 
-			numOfBlocksToProcess := int(highestBlock) - int(blockNumToBeProcessedNext) + 1
+			if blockNumToBeProcessedNext < 0 {
+				blockNumToBeProcessedNext = int(highestBlock)
+			}
+
+			numOfBlocksToProcess := int(highestBlock) - blockNumToBeProcessedNext + 1
 			if numOfBlocksToProcess <= 0 {
 				logrus.Debugf("no new block after %d, sleep 3 seconds", highestBlock)
 				time.Sleep(3 * time.Second)
