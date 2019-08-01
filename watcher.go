@@ -34,20 +34,23 @@ type AbstractWatcher struct {
 	ReceiptLogPlugins []plugin.IReceiptLogPlugin
 
 	ReceiptCatchUpFromBlock uint64
+
+	sleepSecondsForNewBlock int
 }
 
 func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
 	rpc := rpc.NewEthRPCWithRetry(api, 5)
 
 	return &AbstractWatcher{
-		Ctx:                  ctx,
-		rpc:                  rpc,
-		NewBlockChan:         make(chan *structs.RemovableBlock, 32),
-		NewTxAndReceiptChan:  make(chan *structs.RemovableTxAndReceipt, 518),
-		NewReceiptLogChan:    make(chan *structs.RemovableReceiptLog, 518),
-		SyncedBlocks:         list.New(),
-		SyncedTxAndReceipts:  list.New(),
-		MaxSyncedBlockToKeep: 64,
+		Ctx:                     ctx,
+		rpc:                     rpc,
+		NewBlockChan:            make(chan *structs.RemovableBlock, 32),
+		NewTxAndReceiptChan:     make(chan *structs.RemovableTxAndReceipt, 518),
+		NewReceiptLogChan:       make(chan *structs.RemovableReceiptLog, 518),
+		SyncedBlocks:            list.New(),
+		SyncedTxAndReceipts:     list.New(),
+		MaxSyncedBlockToKeep:    64,
+		sleepSecondsForNewBlock: 5,
 	}
 }
 
@@ -159,10 +162,10 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 		logrus.Infoln("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
 
 		if noNewBlockForSync {
-			logrus.Debugf("no new block to sync, sleep for 3 secs")
+			logrus.Debugf("no new block to sync, sleep for %s secs", watcher.sleepSecondsForNewBlock)
 
 			// sleep for 3 secs
-			timer := time.NewTimer(3 * time.Second)
+			timer := time.NewTimer(time.Duration(watcher.sleepSecondsForNewBlock) * time.Second)
 			<-timer.C
 
 			continue
@@ -214,6 +217,10 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 	}
+}
+
+func (watcher *AbstractWatcher) SetSleepSecondsForNewBlock(sec int) {
+	watcher.sleepSecondsForNewBlock = sec
 }
 
 func (watcher *AbstractWatcher) LatestSyncedBlockNum() uint64 {
