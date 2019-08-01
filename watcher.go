@@ -158,6 +158,16 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 		noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
 		logrus.Infoln("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
 
+		if noNewBlockForSync {
+			logrus.Debugf("no new block to sync, sleep for 3 secs")
+
+			// sleep for 3 secs
+			timer := time.NewTimer(3 * time.Second)
+			<-timer.C
+
+			continue
+		}
+
 		for watcher.LatestSyncedBlockNum() < latestBlockNum {
 			select {
 			case <-watcher.Ctx.Done():
@@ -201,15 +211,6 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 				if err != nil {
 					return err
 				}
-
-			}
-
-			if noNewBlockForSync {
-				logrus.Infoln("no new block to sync, sleep for 3 secs")
-
-				// sleep for 3 secs
-				timer := time.NewTimer(3 * time.Second)
-				<-timer.C
 			}
 		}
 	}
