@@ -14,7 +14,7 @@ type ReceiptLogWatcher struct {
 	startBlockNum         int
 	contract              string
 	interestedTopics      []string
-	handler               func(receiptLog structs.RemovableReceiptLog)
+	handler               func(from, to int, receiptLog *structs.RemovableReceiptLog)
 	steps                 int
 	highestSyncedBlockNum int
 }
@@ -25,7 +25,7 @@ func NewReceiptLogWatcher(
 	startBlockNum int,
 	contract string,
 	interestedTopics []string,
-	handler func(receiptLog structs.RemovableReceiptLog),
+	handler func(from, to int, receiptLog *structs.RemovableReceiptLog),
 	steps int,
 ) *ReceiptLogWatcher {
 	return &ReceiptLogWatcher{
@@ -87,10 +87,15 @@ func (w *ReceiptLogWatcher) Run() error {
 				return err
 			}
 
-			for i := 0; i < len(logs); i++ {
-				w.handler(structs.RemovableReceiptLog{
-					IReceiptLog: logs[i],
-				})
+			if len(logs) == 0 {
+				// report progress
+				w.handler(blockNumToBeProcessedNext, to, nil)
+			} else {
+				for i := 0; i < len(logs); i++ {
+					w.handler(blockNumToBeProcessedNext, to, &structs.RemovableReceiptLog{
+						IReceiptLog: logs[i],
+					})
+				}
 			}
 
 			w.updateHighestSyncedBlockNum(to)
