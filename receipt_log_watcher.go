@@ -90,9 +90,6 @@ var defaultConfig = ReceiptLogWatcherConfig{
 func (w *ReceiptLogWatcher) Run() error {
 
 	var blockNumToBeProcessedNext = w.startBlockNum
-	//defer func() {
-	//	w.updateHighestSyncedBlockNumAndLogIndex(blockNumToBeProcessedNext - 1)
-	//}()
 
 	rpc := rpc.NewEthRPCWithRetry(w.api, w.config.RPCMaxRetry)
 
@@ -110,7 +107,7 @@ func (w *ReceiptLogWatcher) Run() error {
 				blockNumToBeProcessedNext = int(highestBlock)
 			}
 
-			numOfBlocksToProcess := int(highestBlock) - blockNumToBeProcessedNext + 1
+			numOfBlocksToProcess := (int(highestBlock) - w.config.LagToHighestBlock) - blockNumToBeProcessedNext + 1
 			if numOfBlocksToProcess <= 0 {
 				sleepSec := w.config.IntervalForPollingNewBlockInSec
 
