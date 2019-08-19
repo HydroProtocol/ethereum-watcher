@@ -107,11 +107,15 @@ func (w *ReceiptLogWatcher) Run() error {
 				blockNumToBeProcessedNext = int(highestBlock)
 			}
 
-			numOfBlocksToProcess := (int(highestBlock) - w.config.LagToHighestBlock) - blockNumToBeProcessedNext + 1
+			// [blockNumToBeProcessedNext...highestBlockCanProcess..[Lag]..CurrentHighestBlock]
+			highestBlockCanProcess := int(highestBlock) - w.config.LagToHighestBlock
+			numOfBlocksToProcess := highestBlockCanProcess - blockNumToBeProcessedNext + 1
+
 			if numOfBlocksToProcess <= 0 {
 				sleepSec := w.config.IntervalForPollingNewBlockInSec
 
-				logrus.Debugf("no new block after %d, sleep %d seconds", highestBlock, sleepSec)
+				logrus.Debugf("no ready block after %d(lag: %d), sleep %d seconds", highestBlockCanProcess, w.config.LagToHighestBlock, sleepSec)
+
 				time.Sleep(time.Duration(sleepSec) * time.Second)
 				continue
 			}
