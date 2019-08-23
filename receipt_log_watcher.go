@@ -17,9 +17,9 @@ type ReceiptLogWatcher struct {
 	contract              string
 	interestedTopics      []string
 	handler               func(from, to int, receiptLog *structs.RemovableReceiptLog) error
+	config                ReceiptLogWatcherConfig
 	highestSyncedBlockNum int
 	highestSyncedLogIndex int
-	config                ReceiptLogWatcherConfig
 }
 
 func NewReceiptLogWatcher(
@@ -34,6 +34,8 @@ func NewReceiptLogWatcher(
 
 	config := decideConfig(configs...)
 
+	pseudoSyncedLogIndex := config.StartSyncAfterLogIndex - 1
+
 	return &ReceiptLogWatcher{
 		ctx:                   ctx,
 		api:                   api,
@@ -41,8 +43,9 @@ func NewReceiptLogWatcher(
 		contract:              contract,
 		interestedTopics:      interestedTopics,
 		handler:               handler,
-		highestSyncedBlockNum: startBlockNum - 1,
 		config:                config,
+		highestSyncedBlockNum: startBlockNum,
+		highestSyncedLogIndex: pseudoSyncedLogIndex,
 	}
 }
 
@@ -146,12 +149,19 @@ func (w *ReceiptLogWatcher) Run() error {
 				for i := 0; i < len(logs); i++ {
 					log := logs[i]
 
-					if log.GetBlockNum() == w.startBlockNum && log.GetLogIndex() <= w.highestSyncedLogIndex {
-						logrus.Debugf("log(%d-%d) < %d-%d, skipped",
-							log.GetBlockNum(), log.GetLogIndex(), w.startBlockNum, w.highestSyncedLogIndex,
-						)
+					// block less
+					if log.GetBlockNum() < w.startBlockNum {
+						logrus.Debugf("log(%d) < %d, skipped", log.GetBlockNum(), w.startBlockNum)
 
 						continue
+					} else if log.GetBlockNum() == w.startBlockNum {
+						// same block, less index
+						if log.GetLogIndex() <= w.config.StartSyncAfterLogIndex {
+							logrus.Debugf("log(%d-%d) < %d-%d, skipped",
+								log.GetBlockNum(), log.GetLogIndex(), w.startBlockNum, w.config.StartSyncAfterLogIndex,
+							)
+							continue
+						}
 					}
 
 					err := w.handler(blockNumToBeProcessedNext, to, &structs.RemovableReceiptLog{
