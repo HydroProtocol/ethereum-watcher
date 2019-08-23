@@ -3,6 +3,7 @@ package nights_watch
 import (
 	"context"
 	"fmt"
+	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
 	"github.com/HydroProtocol/nights-watch/rpc"
 	"github.com/HydroProtocol/nights-watch/structs"
 	"github.com/sirupsen/logrus"
@@ -16,7 +17,7 @@ type ReceiptLogWatcher struct {
 	startBlockNum         int
 	contract              string
 	interestedTopics      []string
-	handler               func(from, to int, receiptLog *structs.RemovableReceiptLog) error
+	handler               func(from, to int, receiptLog sdk.IReceiptLog) error
 	config                ReceiptLogWatcherConfig
 	highestSyncedBlockNum int
 	highestSyncedLogIndex int
@@ -28,7 +29,7 @@ func NewReceiptLogWatcher(
 	startBlockNum int,
 	contract string,
 	interestedTopics []string,
-	handler func(from, to int, receiptLog *structs.RemovableReceiptLog) error,
+	handler func(from, to int, receiptLog sdk.IReceiptLog) error,
 	configs ...ReceiptLogWatcherConfig,
 ) *ReceiptLogWatcher {
 
