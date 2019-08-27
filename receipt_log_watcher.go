@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
 	"github.com/HydroProtocol/nights-watch/rpc"
-	"github.com/HydroProtocol/nights-watch/structs"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -17,7 +16,7 @@ type ReceiptLogWatcher struct {
 	startBlockNum         int
 	contract              string
 	interestedTopics      []string
-	handler               func(from, to int, receiptLog sdk.IReceiptLog) error
+	handler               func(from, to int, receiptLogs []sdk.IReceiptLog) error
 	config                ReceiptLogWatcherConfig
 	highestSyncedBlockNum int
 	highestSyncedLogIndex int
@@ -29,7 +28,7 @@ func NewReceiptLogWatcher(
 	startBlockNum int,
 	contract string,
 	interestedTopics []string,
-	handler func(from, to int, receiptLog sdk.IReceiptLog) error,
+	handler func(from, to int, receiptLogs []sdk.IReceiptLog) error,
 	configs ...ReceiptLogWatcherConfig,
 ) *ReceiptLogWatcher {
 
@@ -138,48 +137,46 @@ func (w *ReceiptLogWatcher) Run() error {
 				return err
 			}
 
-			if len(logs) == 0 && w.config.ReturnForBlockWithNoReceiptLog {
-				err := w.handler(blockNumToBeProcessedNext, to, nil)
-				if err != nil {
-					logrus.Infof("err when handling nil receipt log, block range: %d - %d", blockNumToBeProcessedNext, to)
-					return fmt.Errorf("NIGHTS_WATCH handler(nil) returns error: %s", err)
-				}
-
-				w.updateHighestSyncedBlockNumAndLogIndex(to, -1)
-			} else {
-				for i := 0; i < len(logs); i++ {
-					log := logs[i]
-
-					// block less
-					if log.GetBlockNum() < w.startBlockNum {
-						logrus.Debugf("log(%d) < %d, skipped", log.GetBlockNum(), w.startBlockNum)
-
-						continue
-					} else if log.GetBlockNum() == w.startBlockNum {
-						// same block, less index
-						if log.GetLogIndex() <= w.config.StartSyncAfterLogIndex {
-							logrus.Debugf("log(%d-%d) < %d-%d, skipped",
-								log.GetBlockNum(), log.GetLogIndex(), w.startBlockNum, w.config.StartSyncAfterLogIndex,
-							)
-							continue
-						}
-					}
-
-					err := w.handler(blockNumToBeProcessedNext, to, &structs.RemovableReceiptLog{
-						IReceiptLog: log,
-					})
-
+			if len(logs) == 0 {
+				if w.config.ReturnForBlockWithNoReceiptLog {
+					err := w.handler(blockNumToBeProcessedNext, to, nil)
 					if err != nil {
-						logrus.Infof("err when handling receipt log, block range: %d - %d, receipt: %+v",
-							blockNumToBeProcessedNext, to, log,
-						)
-
-						return fmt.Errorf("NIGHTS_WATCH handler returns error: %s", err)
+						logrus.Infof("err when handling nil receipt log, block range: %d - %d", blockNumToBeProcessedNext, to)
+						return fmt.Errorf("NIGHTS_WATCH handler(nil) returns error: %s", err)
 					}
+				}
+			} else {
+				//for i := 0; i < len(logs); i++ {
+				//	log := logs[i]
+				//
+				//	// block less
+				//	if log.GetBlockNum() < w.startBlockNum {
+				//		logrus.Debugf("log(%d) < %d, skipped", log.GetBlockNum(), w.startBlockNum)
+				//
+				//		continue
+				//	} else if log.GetBlockNum() == w.startBlockNum {
+				//		// same block, less index
+				//		if log.GetLogIndex() <= w.config.StartSyncAfterLogIndex {
+				//			logrus.Debugf("log(%d-%d) < %d-%d, skipped",
+				//				log.GetBlockNum(), log.GetLogIndex(), w.startBlockNum, w.config.StartSyncAfterLogIndex,
+				//			)
+				//			continue
+				//		}
+				//	}
+				//}
 
-					w.updateHighestSyncedBlockNumAndLogIndex(log.GetBlockNum(), log.GetLogIndex())
+				err := w.handler(blockNumToBeProcessedNext, to, logs)
+				if err != nil {
+					logrus.Infof("err when handling receipt log, block range: %d - %d, receipt logs: %+v",
+						blockNumToBeProcessedNext, to, logs,
+					)
+
+					return fmt.Errorf("NIGHTS_WATCH handler returns error: %s", err)
 				}
 			}
+
+			// todo rm 2nd param
+			w.updateHighestSyncedBlockNumAndLogIndex(to, -1)
 
 			blockNumToBeProcessedNext = to + 1
 		}
