@@ -16,7 +16,7 @@ type ReceiptLogWatcher struct {
 	startBlockNum         int
 	contract              string
 	interestedTopics      []string
-	handler               func(from, to int, receiptLogs []sdk.IReceiptLog) error
+	handler               func(from, to int, receiptLogs []sdk.IReceiptLog, isUpToHighestBlock bool) error
 	config                ReceiptLogWatcherConfig
 	highestSyncedBlockNum int
 	highestSyncedLogIndex int
@@ -28,7 +28,7 @@ func NewReceiptLogWatcher(
 	startBlockNum int,
 	contract string,
 	interestedTopics []string,
-	handler func(from, to int, receiptLogs []sdk.IReceiptLog) error,
+	handler func(from, to int, receiptLogs []sdk.IReceiptLog, isUpToHighestBlock bool) error,
 	configs ...ReceiptLogWatcherConfig,
 ) *ReceiptLogWatcher {
 
@@ -137,9 +137,11 @@ func (w *ReceiptLogWatcher) Run() error {
 				return err
 			}
 
+			isUpToHighestBlock := to == int(highestBlock)
+
 			if len(logs) == 0 {
 				if w.config.ReturnForBlockWithNoReceiptLog {
-					err := w.handler(blockNumToBeProcessedNext, to, nil)
+					err := w.handler(blockNumToBeProcessedNext, to, nil, isUpToHighestBlock)
 					if err != nil {
 						logrus.Infof("err when handling nil receipt log, block range: %d - %d", blockNumToBeProcessedNext, to)
 						return fmt.Errorf("NIGHTS_WATCH handler(nil) returns error: %s", err)
@@ -165,7 +167,7 @@ func (w *ReceiptLogWatcher) Run() error {
 				//	}
 				//}
 
-				err := w.handler(blockNumToBeProcessedNext, to, logs)
+				err := w.handler(blockNumToBeProcessedNext, to, logs, isUpToHighestBlock)
 				if err != nil {
 					logrus.Infof("err when handling receipt log, block range: %d - %d, receipt logs: %+v",
 						blockNumToBeProcessedNext, to, logs,
