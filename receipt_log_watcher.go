@@ -119,8 +119,12 @@ func (w *ReceiptLogWatcher) Run() error {
 
 				logrus.Debugf("no ready block after %d(lag: %d), sleep %d seconds", highestBlockCanProcess, w.config.LagToHighestBlock, sleepSec)
 
-				time.Sleep(time.Duration(sleepSec) * time.Second)
-				continue
+				select {
+				case <-time.After(time.Duration(sleepSec) * time.Second):
+					continue
+				case <-w.ctx.Done():
+					return nil
+				}
 			}
 
 			var to int
@@ -128,8 +132,8 @@ func (w *ReceiptLogWatcher) Run() error {
 				// quick mode
 				to = blockNumToBeProcessedNext + w.config.StepSizeForBigLag - 1
 			} else {
-				// normal mode, 1block each time
-				to = blockNumToBeProcessedNext
+				// normal mode, up to cur highest block num can process
+				to = highestBlockCanProcess
 			}
 
 			logs, err := rpc.GetLogs(uint64(blockNumToBeProcessedNext), uint64(to), w.contract, w.interestedTopics)
@@ -148,24 +152,6 @@ func (w *ReceiptLogWatcher) Run() error {
 					}
 				}
 			} else {
-				//for i := 0; i < len(logs); i++ {
-				//	log := logs[i]
-				//
-				//	// block less
-				//	if log.GetBlockNum() < w.startBlockNum {
-				//		logrus.Debugf("log(%d) < %d, skipped", log.GetBlockNum(), w.startBlockNum)
-				//
-				//		continue
-				//	} else if log.GetBlockNum() == w.startBlockNum {
-				//		// same block, less index
-				//		if log.GetLogIndex() <= w.config.StartSyncAfterLogIndex {
-				//			logrus.Debugf("log(%d-%d) < %d-%d, skipped",
-				//				log.GetBlockNum(), log.GetLogIndex(), w.startBlockNum, w.config.StartSyncAfterLogIndex,
-				//			)
-				//			continue
-				//		}
-				//	}
-				//}
 
 				err := w.handler(blockNumToBeProcessedNext, to, logs, isUpToHighestBlock)
 				if err != nil {
