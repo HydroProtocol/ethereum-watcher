@@ -4,9 +4,9 @@
 
 nights-watch is an event listener for Ethereum written in Golang.
 
-## Why we build this?
+## Why build this?
 
-Many backend services at Hydro need to know things are changed on blockchain. They may be some events or transactions results. 
+Many backend services at Hydro need to know things are changed on the blockchain. They may be some events or transaction results. 
 
 ## Features
 
@@ -44,9 +44,3 @@ func main() {
 ## License
 
 [Apache 2.0 License](LICENSE)
-
-
-
-
-
-
