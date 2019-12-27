@@ -25,6 +25,11 @@ type RemovableTxAndReceipt struct {
 	TimeStamp uint64
 }
 
+type RemovableReceiptLog struct {
+	sdk.IReceiptLog
+	IsRemoved bool
+}
+
 func NewRemovableTxAndReceipt(tx sdk.Transaction, receipt sdk.TransactionReceipt, removed bool, timeStamp uint64) *RemovableTxAndReceipt {
 	return &RemovableTxAndReceipt{
 		&TxAndReceipt{
