@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
+	"github.com/HydroProtocol/nights-watch/blockchain"
 	"github.com/HydroProtocol/nights-watch/plugin"
 	"github.com/HydroProtocol/nights-watch/rpc"
 	"github.com/HydroProtocol/nights-watch/structs"
@@ -159,10 +159,10 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 		}
 
 		noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
-		logrus.Infoln("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
+		logrus.Debugln("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
 
 		if noNewBlockForSync {
-			logrus.Debugf("no new block to sync, sleep for %s secs", watcher.sleepSecondsForNewBlock)
+			logrus.Debugf("no new block to sync, sleep for %d secs", watcher.sleepSecondsForNewBlock)
 
 			// sleep for 3 secs
 			timer := time.NewTimer(time.Duration(watcher.sleepSecondsForNewBlock) * time.Second)
@@ -207,7 +207,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 					logrus.Infoln("found fork, popping")
 					err = watcher.popBlocksUntilReachMainChain()
 				} else {
-					logrus.Infoln("adding new block:", newBlock.Number())
+					logrus.Debugln("adding new block:", newBlock.Number())
 					err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false), latestBlockNum)
 				}
 
@@ -231,7 +231,7 @@ func (watcher *AbstractWatcher) LatestSyncedBlockNum() uint64 {
 		return 0
 	}
 
-	b := watcher.SyncedBlocks.Back().Value.(sdk.Block)
+	b := watcher.SyncedBlocks.Back().Value.(blockchain.Block)
 
 	return b.Number()
 }
@@ -239,7 +239,7 @@ func (watcher *AbstractWatcher) LatestSyncedBlockNum() uint64 {
 // go thru plugins to check if this watcher need fetch receipt for tx
 // network load for fetching receipts per tx is heavy,
 // we use this method to make sure we only do the work we need
-func (watcher *AbstractWatcher) needReceipt(tx sdk.Transaction) bool {
+func (watcher *AbstractWatcher) needReceipt(tx blockchain.Transaction) bool {
 	plugins := watcher.TxReceiptPlugins
 
 	for _, p := range plugins {
@@ -377,7 +377,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 	// clean synced data
 	for watcher.SyncedBlocks.Len() >= watcher.MaxSyncedBlockToKeep {
 		// clean block
-		b := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Front()).(sdk.Block)
+		b := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Front()).(blockchain.Block)
 
 		// clean txAndReceipt
 		for watcher.SyncedTxAndReceipts.Front() != nil {
@@ -398,7 +398,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 	return nil
 }
 
-func (watcher *AbstractWatcher) fetchReceiptLogs(isRemoved bool, block sdk.Block, from, to uint64, address string, topics []string) error {
+func (watcher *AbstractWatcher) fetchReceiptLogs(isRemoved bool, block blockchain.Block, from, to uint64, address string, topics []string) error {
 
 	receiptLogs, err := watcher.rpc.GetLogs(from, to, address, topics)
 	if err != nil {
@@ -460,7 +460,7 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 		}
 
 		// NOTE: instead of watcher.LatestSyncedBlockNum() cuz it has lock
-		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(sdk.Block)
+		lastSyncedBlock := watcher.SyncedBlocks.Back().Value.(blockchain.Block)
 		block, err := watcher.rpc.GetBlockByNum(lastSyncedBlock.Number())
 		if err != nil {
 			return err
@@ -468,7 +468,7 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 
 		if block.Hash() != lastSyncedBlock.Hash() {
 			fmt.Println("removing tail block:", watcher.SyncedBlocks.Back())
-			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(sdk.Block)
+			removedBlock := watcher.SyncedBlocks.Remove(watcher.SyncedBlocks.Back()).(blockchain.Block)
 
 			for watcher.SyncedTxAndReceipts.Back() != nil {
 
@@ -492,9 +492,9 @@ func (watcher *AbstractWatcher) popBlocksUntilReachMainChain() error {
 	}
 }
 
-func (watcher *AbstractWatcher) FoundFork(newBlock sdk.Block) bool {
+func (watcher *AbstractWatcher) FoundFork(newBlock blockchain.Block) bool {
 	for e := watcher.SyncedBlocks.Back(); e != nil; e = e.Prev() {
-		syncedBlock := e.Value.(sdk.Block)
+		syncedBlock := e.Value.(blockchain.Block)
 
 		//if syncedBlock == nil {
 		//	logrus.Warnln("error, syncedBlock is nil")

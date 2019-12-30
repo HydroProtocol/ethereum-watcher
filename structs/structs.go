@@ -1,13 +1,15 @@
 package structs
 
-import "github.com/HydroProtocol/hydro-sdk-backend/sdk"
+import (
+	"github.com/HydroProtocol/nights-watch/blockchain"
+)
 
 type RemovableBlock struct {
-	sdk.Block
+	blockchain.Block
 	IsRemoved bool
 }
 
-func NewRemovableBlock(block sdk.Block, isRemoved bool) *RemovableBlock {
+func NewRemovableBlock(block blockchain.Block, isRemoved bool) *RemovableBlock {
 	return &RemovableBlock{
 		block,
 		isRemoved,
@@ -15,8 +17,8 @@ func NewRemovableBlock(block sdk.Block, isRemoved bool) *RemovableBlock {
 }
 
 type TxAndReceipt struct {
-	Tx      sdk.Transaction
-	Receipt sdk.TransactionReceipt
+	Tx      blockchain.Transaction
+	Receipt blockchain.TransactionReceipt
 }
 
 type RemovableTxAndReceipt struct {
@@ -26,11 +28,11 @@ type RemovableTxAndReceipt struct {
 }
 
 type RemovableReceiptLog struct {
-	sdk.IReceiptLog
+	blockchain.IReceiptLog
 	IsRemoved bool
 }
 
-func NewRemovableTxAndReceipt(tx sdk.Transaction, receipt sdk.TransactionReceipt, removed bool, timeStamp uint64) *RemovableTxAndReceipt {
+func NewRemovableTxAndReceipt(tx blockchain.Transaction, receipt blockchain.TransactionReceipt, removed bool, timeStamp uint64) *RemovableTxAndReceipt {
 	return &RemovableTxAndReceipt{
 		&TxAndReceipt{
 			tx,
@@ -42,11 +44,11 @@ func NewRemovableTxAndReceipt(tx sdk.Transaction, receipt sdk.TransactionReceipt
 }
 
 type RemovableTx struct {
-	sdk.Transaction
+	blockchain.Transaction
 	IsRemoved bool
 }
 
-func NewRemovableTx(tx sdk.Transaction, removed bool) RemovableTx {
+func NewRemovableTx(tx blockchain.Transaction, removed bool) RemovableTx {
 	return RemovableTx{
 		tx,
 		removed,

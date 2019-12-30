@@ -3,7 +3,7 @@ package nights_watch
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
+	"github.com/HydroProtocol/nights-watch/blockchain"
 	"github.com/HydroProtocol/nights-watch/plugin"
 	"github.com/HydroProtocol/nights-watch/structs"
 	"github.com/labstack/gommon/log"
@@ -49,7 +49,7 @@ func TestFilterPlugin(t *testing.T) {
 	}
 
 	// only accept txs which end with: f
-	filterFunc := func(tx sdk.Transaction) bool {
+	filterFunc := func(tx blockchain.Transaction) bool {
 		txHash := tx.GetHash()
 
 		return txHash[len(txHash)-1:] == "f"
@@ -81,7 +81,7 @@ func TestFilterPluginForDyDxApprove(t *testing.T) {
 	}
 
 	// only accept txs which send to DAI
-	filterFunc := func(tx sdk.Transaction) bool {
+	filterFunc := func(tx blockchain.Transaction) bool {
 		return tx.GetTo() == "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359"
 	}
 

@@ -2,8 +2,7 @@ package rpc
 
 import (
 	"errors"
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
+	"github.com/HydroProtocol/nights-watch/blockchain"
 	"github.com/onrik/ethrpc"
 	"github.com/sirupsen/logrus"
 	"strconv"
@@ -19,15 +18,15 @@ func NewEthRPC(api string) *EthBlockChainRPC {
 	return &EthBlockChainRPC{rpc}
 }
 
-func (rpc EthBlockChainRPC) GetBlockByNum(num uint64) (sdk.Block, error) {
+func (rpc EthBlockChainRPC) GetBlockByNum(num uint64) (blockchain.Block, error) {
 	return rpc.getBlockByNum(num, true)
 }
 
-func (rpc EthBlockChainRPC) GetLiteBlockByNum(num uint64) (sdk.Block, error) {
+func (rpc EthBlockChainRPC) GetLiteBlockByNum(num uint64) (blockchain.Block, error) {
 	return rpc.getBlockByNum(num, false)
 }
 
-func (rpc EthBlockChainRPC) getBlockByNum(num uint64, withTx bool) (sdk.Block, error) {
+func (rpc EthBlockChainRPC) getBlockByNum(num uint64, withTx bool) (blockchain.Block, error) {
 	b, err := rpc.rpcImpl.EthGetBlockByNumber(int(num), withTx)
 	if err != nil {
 		return nil, err
@@ -36,10 +35,10 @@ func (rpc EthBlockChainRPC) getBlockByNum(num uint64, withTx bool) (sdk.Block, e
 		return nil, errors.New("nil block")
 	}
 
-	return &ethereum.EthereumBlock{b}, err
+	return &blockchain.EthereumBlock{b}, err
 }
 
-func (rpc EthBlockChainRPC) GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error) {
+func (rpc EthBlockChainRPC) GetTransactionReceipt(txHash string) (blockchain.TransactionReceipt, error) {
 	receipt, err := rpc.rpcImpl.EthGetTransactionReceipt(txHash)
 	if err != nil {
 		return nil, err
@@ -48,7 +47,7 @@ func (rpc EthBlockChainRPC) GetTransactionReceipt(txHash string) (sdk.Transactio
 		return nil, errors.New("nil receipt")
 	}
 
-	return &ethereum.EthereumTransactionReceipt{receipt}, err
+	return &blockchain.EthereumTransactionReceipt{receipt}, err
 }
 
 func (rpc EthBlockChainRPC) GetCurrentBlockNum() (uint64, error) {
@@ -60,7 +59,7 @@ func (rpc EthBlockChainRPC) GetLogs(
 	fromBlockNum, toBlockNum uint64,
 	address string,
 	topics []string,
-) ([]sdk.IReceiptLog, error) {
+) ([]blockchain.IReceiptLog, error) {
 
 	filterParam := ethrpc.FilterParams{
 		FromBlock: "0x" + strconv.FormatUint(fromBlockNum, 16),
@@ -77,13 +76,13 @@ func (rpc EthBlockChainRPC) GetLogs(
 
 	logrus.Debugf("EthGetLogs logs count at block(%d - %d): %d", fromBlockNum, toBlockNum, len(logs))
 
-	var result []sdk.IReceiptLog
+	var result []blockchain.IReceiptLog
 	for i := 0; i < len(logs); i++ {
 		l := logs[i]
 
 		logrus.Debugf("EthGetLogs receipt log: %+v", l)
 
-		result = append(result, ethereum.ReceiptLog{Log: &l})
+		result = append(result, blockchain.ReceiptLog{Log: &l})
 	}
 
 	return result, err
