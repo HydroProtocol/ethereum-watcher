@@ -73,15 +73,15 @@ func extractERC20TransfersIfExist(r *structs.RemovableTxAndReceipt) (rst []Trans
 	// todo a little weird
 	if receipt, ok := r.Receipt.(*blockchain.EthereumTransactionReceipt); ok {
 		for _, log := range receipt.Logs {
-			if len(log.Topics) == 3 && log.Topics[0] == transferEventSig {
-				from := log.Topics[1]
-				to := log.Topics[2]
+			if len(log.Topics) != 3 || log.Topics[0] != transferEventSig {
+				continue
+			}
 
-				amount, ok := HexToDecimal(log.Data)
+			from := log.Topics[1]
+			to := log.Topics[2]
 
-				if ok {
-					rst = append(rst, TransferEvent{log.Address, from, to, amount})
-				}
+			if amount, ok := HexToDecimal(log.Data); ok {
+				rst = append(rst, TransferEvent{log.Address, from, to, amount})
 			}
 		}
 	}

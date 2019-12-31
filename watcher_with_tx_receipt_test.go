@@ -8,6 +8,7 @@ import (
 	"github.com/HydroProtocol/nights-watch/structs"
 	"github.com/labstack/gommon/log"
 	"github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 	"testing"
 )
 
@@ -33,9 +34,14 @@ func TestErc20TransferPlugin(t *testing.T) {
 	api := "https://mainnet.infura.io/v3/19d753b2600445e292d54b1ef58d4df4"
 	w := NewHttpBasedEthWatcher(context.Background(), api)
 
-	w.RegisterTxReceiptPlugin(plugin.NewERC20TransferPlugin(func(token, from, to string, amount decimal.Decimal, isRemove bool) {
-		fmt.Println("New ERC20 Transfer >>", token, from, "->", to, amount, isRemove)
-	}))
+	w.RegisterTxReceiptPlugin(plugin.NewERC20TransferPlugin(
+		func(token, from, to string, amount decimal.Decimal, isRemove bool) {
+
+			logrus.Infof("New ERC20 Transfer >> token(%s), %s -> %s, amount: %s, isRemoved: %t",
+				token, from, to, amount, isRemove)
+
+		},
+	))
 
 	w.RunTillExit()
 }
