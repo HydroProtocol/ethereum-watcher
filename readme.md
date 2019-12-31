@@ -55,7 +55,7 @@ func main() {
 	api := "https://mainnet.infura.io/v3/19d753b2600445e292d54b1ef58d4df4"
 	w := NewHttpBasedEthWatcher(context.Background(), api)
 
-  // we use BlockPlugin here
+	// we use BlockPlugin here
 	w.RegisterBlockPlugin(plugin.NewBlockNumPlugin(func(i uint64, b bool) {
 		fmt.Println(">>", i, b)
 	}))
@@ -81,7 +81,7 @@ func main() {
 	api := "https://mainnet.infura.io/v3/19d753b2600445e292d54b1ef58d4df4"
 	w := NewHttpBasedEthWatcher(context.Background(), api)
 
-  // we use TxReceiptPlugin here
+	// we use TxReceiptPlugin here
 	w.RegisterTxReceiptPlugin(plugin.NewERC20TransferPlugin(
 		func(token, from, to string, amount decimal.Decimal, isRemove bool) {
 
@@ -125,7 +125,7 @@ func main() {
 		return nil
 	}
 
-  // query for USDT Transfer Events
+	// query for USDT Transfer Events
 	receiptLogWatcher := NewReceiptLogWatcher(
 		context.TODO(),
 		api,
