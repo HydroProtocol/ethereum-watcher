@@ -3,7 +3,7 @@ package nights_watch
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
+	"github.com/HydroProtocol/nights-watch/blockchain"
 	"github.com/HydroProtocol/nights-watch/rpc"
 	"github.com/sirupsen/logrus"
 	"sync"
@@ -16,7 +16,7 @@ type ReceiptLogWatcher struct {
 	startBlockNum         int
 	contract              string
 	interestedTopics      []string
-	handler               func(from, to int, receiptLogs []sdk.IReceiptLog, isUpToHighestBlock bool) error
+	handler               func(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToHighestBlock bool) error
 	config                ReceiptLogWatcherConfig
 	highestSyncedBlockNum int
 	highestSyncedLogIndex int
@@ -28,7 +28,7 @@ func NewReceiptLogWatcher(
 	startBlockNum int,
 	contract string,
 	interestedTopics []string,
-	handler func(from, to int, receiptLogs []sdk.IReceiptLog, isUpToHighestBlock bool) error,
+	handler func(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToHighestBlock bool) error,
 	configs ...ReceiptLogWatcherConfig,
 ) *ReceiptLogWatcher {
 

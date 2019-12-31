@@ -1,13 +1,10 @@
 package plugin
 
 import (
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk/ethereum"
+	"github.com/HydroProtocol/nights-watch/blockchain"
 	"github.com/HydroProtocol/nights-watch/structs"
-	"math/big"
-
-	//"github.com/HydroProtocol/nights-watch/utils"
 	"github.com/shopspring/decimal"
+	"math/big"
 )
 
 type ITxReceiptPlugin interface {
@@ -16,16 +13,16 @@ type ITxReceiptPlugin interface {
 
 type TxReceiptPluginWithFilter struct {
 	ITxReceiptPlugin
-	filterFunc func(transaction sdk.Transaction) bool
+	filterFunc func(transaction blockchain.Transaction) bool
 }
 
-func (p TxReceiptPluginWithFilter) NeedReceipt(tx sdk.Transaction) bool {
+func (p TxReceiptPluginWithFilter) NeedReceipt(tx blockchain.Transaction) bool {
 	return p.filterFunc(tx)
 }
 
 func NewTxReceiptPluginWithFilter(
 	callback func(tx *structs.RemovableTxAndReceipt),
-	filterFunc func(transaction sdk.Transaction) bool) *TxReceiptPluginWithFilter {
+	filterFunc func(transaction blockchain.Transaction) bool) *TxReceiptPluginWithFilter {
 
 	p := NewTxReceiptPlugin(callback)
 	return &TxReceiptPluginWithFilter{p, filterFunc}
@@ -74,7 +71,7 @@ func extractERC20TransfersIfExist(r *structs.RemovableTxAndReceipt) (rst []Trans
 	transferEventSig := "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
 	// todo a little weird
-	if receipt, ok := r.Receipt.(*ethereum.EthereumTransactionReceipt); ok {
+	if receipt, ok := r.Receipt.(*blockchain.EthereumTransactionReceipt); ok {
 		for _, log := range receipt.Logs {
 			if len(log.Topics) == 3 && log.Topics[0] == transferEventSig {
 				from := log.Topics[1]

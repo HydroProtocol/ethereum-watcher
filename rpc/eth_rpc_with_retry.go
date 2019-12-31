@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"github.com/HydroProtocol/hydro-sdk-backend/sdk"
+	"github.com/HydroProtocol/nights-watch/blockchain"
 	"time"
 )
 
@@ -16,7 +16,7 @@ func NewEthRPCWithRetry(api string, maxRetryCount int) *EthBlockChainRPCWithRetr
 	return &EthBlockChainRPCWithRetry{rpc, maxRetryCount}
 }
 
-func (rpc EthBlockChainRPCWithRetry) GetBlockByNum(num uint64) (rst sdk.Block, err error) {
+func (rpc EthBlockChainRPCWithRetry) GetBlockByNum(num uint64) (rst blockchain.Block, err error) {
 	for i := 0; i <= rpc.maxRetryTimes; i++ {
 		rst, err = rpc.EthBlockChainRPC.GetBlockByNum(num)
 		if err == nil {
@@ -29,7 +29,7 @@ func (rpc EthBlockChainRPCWithRetry) GetBlockByNum(num uint64) (rst sdk.Block, e
 	return
 }
 
-func (rpc EthBlockChainRPCWithRetry) GetLiteBlockByNum(num uint64) (rst sdk.Block, err error) {
+func (rpc EthBlockChainRPCWithRetry) GetLiteBlockByNum(num uint64) (rst blockchain.Block, err error) {
 	for i := 0; i <= rpc.maxRetryTimes; i++ {
 		rst, err = rpc.EthBlockChainRPC.GetLiteBlockByNum(num)
 		if err == nil {
@@ -42,7 +42,7 @@ func (rpc EthBlockChainRPCWithRetry) GetLiteBlockByNum(num uint64) (rst sdk.Bloc
 	return
 }
 
-func (rpc EthBlockChainRPCWithRetry) GetTransactionReceipt(txHash string) (rst sdk.TransactionReceipt, err error) {
+func (rpc EthBlockChainRPCWithRetry) GetTransactionReceipt(txHash string) (rst blockchain.TransactionReceipt, err error) {
 	for i := 0; i <= rpc.maxRetryTimes; i++ {
 		rst, err = rpc.EthBlockChainRPC.GetTransactionReceipt(txHash)
 		if err == nil {
@@ -71,7 +71,7 @@ func (rpc EthBlockChainRPCWithRetry) GetLogs(
 	fromBlockNum, toBlockNum uint64,
 	address string,
 	topics []string,
-) (rst []sdk.IReceiptLog, err error) {
+) (rst []blockchain.IReceiptLog, err error) {
 	for i := 0; i <= rpc.maxRetryTimes; i++ {
 		rst, err = rpc.EthBlockChainRPC.GetLogs(fromBlockNum, toBlockNum, address, topics)
 		if err == nil {

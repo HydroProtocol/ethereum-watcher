@@ -1,13 +1,15 @@
 package rpc
 
-import "github.com/HydroProtocol/hydro-sdk-backend/sdk"
+import (
+	"github.com/HydroProtocol/nights-watch/blockchain"
+)
 
 type IBlockChainRPC interface {
 	GetCurrentBlockNum() (uint64, error)
 
-	GetBlockByNum(uint64) (sdk.Block, error)
-	GetLiteBlockByNum(uint64) (sdk.Block, error)
-	GetTransactionReceipt(txHash string) (sdk.TransactionReceipt, error)
+	GetBlockByNum(uint64) (blockchain.Block, error)
+	GetLiteBlockByNum(uint64) (blockchain.Block, error)
+	GetTransactionReceipt(txHash string) (blockchain.TransactionReceipt, error)
 
-	GetLogs(from, to uint64, address string, topics []string) ([]sdk.IReceiptLog, error)
+	GetLogs(from, to uint64, address string, topics []string) ([]blockchain.IReceiptLog, error)
 }
