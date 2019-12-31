@@ -39,7 +39,7 @@ One Interesting thing about plugins is that you can create your plugin based on 
 
 ### Example of Watcher
 
-**Print number of newly mined blocks**
+#### Print number of newly mined blocks
 
 ```go
 package main
@@ -64,7 +64,7 @@ func main() {
 }
 ```
 
-**Listen for new ERC20 Transfer Events** 
+#### Listen for new ERC20 Transfer Events
 
 ```go
 package main
