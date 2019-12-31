@@ -4,25 +4,27 @@
 
 nights-watch is an event listener for Ethereum written in Golang.
 
-## Why build this?
+# Why build this?
 
 Many backend services at Hydro need to know things are changed on the blockchain. They may be some events or transaction results. 
 
-## Features
+# Features
 
 1. Plug-in friendly. It easy to add a plugin to listen on a sort of events.
 2. Fork Tolerance. If a fork occurs, a revert message will bet sent to the subscriber.
 
-## Install
+# Install
 
 Run `go get github.com/HydroProtocol/nights-watch`
 
-## How to use
+# How to use
 
 the most two important structs we provide are:
 
 - Watcher
 - ReceiptLogWatcher
+
+## Watcher
 
 `Watcher` is an HTTP client keeps polling for newly mined blocks on Ethereum, we can register various kinds of plugins into `Watcher`, including:
 
@@ -35,13 +37,9 @@ Once the `Watcher` sees a new block, it will parse the info and feed the data in
 
 One Interesting thing about plugins is that you can create your plugin based on provided ones, for example, as the code is shown [below](#listen-for-new-erc20-transfer-events), we register an `ERC20TransferPlugin` to show new ERC20 Transfer Events, this plugin is based on `TransactionReceiptPlugin`, what we do in it is simply parse the receipts info from `TransactionReceiptPlugin`. So if you want to show more info than `ERC20TransferPlugin`, for example, the gas used for this transfer transaction, you can easily create a `BetterERC20TransferPlugin` showing that.
 
-`Watcher` is polling for blocks one by one, so what if we want to check certain events of the last 10000 blocks? `Watcher` can do that but fetching blocks one by one can be slow. `ReceiptLogWatcher` comes to the rescue.
-
-`ReceiptLogWatcher` make use of the `eth_getLogs` to query for logs in batch. check out the code [below](#example-of-receiptlogwatcher) to see how to use it.
-
 ### Example of Watcher
 
-#### Print number of newly mined blocks
+**Print number of newly mined blocks**
 
 ```go
 package main
@@ -66,7 +64,7 @@ func main() {
 }
 ```
 
-#### Listen for new ERC20 Transfer Events 
+**Listen for new ERC20 Transfer Events** 
 
 ```go
 package main
@@ -96,6 +94,13 @@ func main() {
 	w.RunTillExit()
 }
 ```
+
+## ReceiptLogWatcher
+
+`Watcher` is polling for blocks one by one, so what if we want to check certain events of the last 10000 blocks? `Watcher` can do that but fetching blocks one by one can be slow. `ReceiptLogWatcher` comes to the rescue.
+
+`ReceiptLogWatcher` make use of the `eth_getLogs` to query for logs in batch. check out the code [below](#example-of-receiptlogwatcher) to see how to use it.
+
 
 ### Example of ReceiptLogWatcher
 
@@ -140,6 +145,6 @@ func main() {
 
 
 
-## License
+# License
 
 [Apache 2.0 License](LICENSE)
