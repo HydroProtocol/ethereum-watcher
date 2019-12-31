@@ -97,9 +97,9 @@ func main() {
 
 ## ReceiptLogWatcher
 
-`Watcher` is polling for blocks one by one, so what if we want to check certain events of the last 10000 blocks? `Watcher` can do that but fetching blocks one by one can be slow. `ReceiptLogWatcher` comes to the rescue.
+`Watcher` is polling for blocks one by one, so what if we want to query certain events from the latest 10000 blocks? `Watcher` can do that but fetching blocks one by one can be slow. `ReceiptLogWatcher` comes to the rescue.
 
-`ReceiptLogWatcher` make use of the `eth_getLogs` to query for logs in batch. check out the code [below](#example-of-receiptlogwatcher) to see how to use it.
+`ReceiptLogWatcher` makes use of the `eth_getLogs` to query for logs in batch. check out the code [below](#example-of-receiptlogwatcher) to see how to use it.
 
 
 ### Example of ReceiptLogWatcher
@@ -116,7 +116,8 @@ import (
 func main() {
 	api := "https://mainnet.infura.io/v3/19d753b2600445e292d54b1ef58d4df4"
 	usdtContractAdx := "0xdac17f958d2ee523a2206206994597c13d831ec7"
-	// Transfer
+  
+	// ERC20 Transfer Event
 	topicsInterestedIn := []string{"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"}
 
 	handler := func(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToHighestBlock bool) error {
@@ -124,6 +125,7 @@ func main() {
 		return nil
 	}
 
+  // query for USDT Transfer Events
 	receiptLogWatcher := NewReceiptLogWatcher(
 		context.TODO(),
 		api,
