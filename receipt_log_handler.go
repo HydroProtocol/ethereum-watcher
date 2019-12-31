@@ -10,6 +10,7 @@ import (
 
 const DefaultStepSizeForBigLag = 10
 
+//deprecated, please use receipt_log_watcher instead.
 func ListenForReceiptLogTillExit(
 	ctx context.Context,
 	api string,
