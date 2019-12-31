@@ -31,13 +31,13 @@ the most two important structs we provide are:
 - TransactionReceiptPlugin
 - ReceiptLogPlugin
 
-Once the `Watcher` sees a new block, it will parse the info and feed the data into the registered plugins, you can see the code examples [below](##Example).
+Once the `Watcher` sees a new block, it will parse the info and feed the data into the registered plugins, you can see the code examples [below](#example-of-watcher).
 
-One Interesting thing about plugins is that you can create your plugin based on provided ones, for example, as the code is shown below, we register an `ERC20TransferPlugin` to show new ERC20 Transfer Events, this plugin is based on `TransactionReceiptPlugin`, what we do in it is simply parse the receipts info from `TransactionReceiptPlugin`. So if you want to show more info than `ERC20TransferPlugin`, for example, the gas used for this transfer transaction, you can easily create a `BetterERC20TransferPlugin` showing that.
+One Interesting thing about plugins is that you can create your plugin based on provided ones, for example, as the code is shown [below](#listen-for-new-erc20-transfer-events), we register an `ERC20TransferPlugin` to show new ERC20 Transfer Events, this plugin is based on `TransactionReceiptPlugin`, what we do in it is simply parse the receipts info from `TransactionReceiptPlugin`. So if you want to show more info than `ERC20TransferPlugin`, for example, the gas used for this transfer transaction, you can easily create a `BetterERC20TransferPlugin` showing that.
 
 `Watcher` is polling for blocks one by one, so what if we want to check certain events of the last 10000 blocks? `Watcher` can do that but fetching blocks one by one can be slow. `ReceiptLogWatcher` comes to the rescue.
 
-`ReceiptLogWatcher` make use of the `eth_getLogs` to query for logs in batch. check out the code below to see how to use it.
+`ReceiptLogWatcher` make use of the `eth_getLogs` to query for logs in batch. check out the code [below](#example-of-receiptlogwatcher) to see how to use it.
 
 ### Example of Watcher
 
