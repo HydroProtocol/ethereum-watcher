@@ -40,8 +40,8 @@ jobs:
         REPO=`echo ${{github.repository}} | tr '[:upper:]' '[:lower:]'`
         REF=`echo ${{github.ref}} | awk -F/ '{print $NF}'`
 
-        CONTAINER_IMAGE=$DOCKER_REG/$REPO:${{ github.sha }}
-        CONTAINER_IMAGE_ALIAS=$DOCKER_REG/$REPO:$REF
+        CONTAINER_IMAGE=$DOCKER_REG/$REPO/$REPO:${{ github.sha }}
+        CONTAINER_IMAGE_ALIAS=$DOCKER_REG/$REPO/$REPO:$REF
 
         echo '${{ secrets.GITHUB_TOKEN }}' | docker login --username=${{ github.actor }} $DOCKER_REG --password-stdin
 
