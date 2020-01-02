@@ -1,5 +1,8 @@
 name: Go
 on: [push]
+env:
+# DOCKER_REG: docker.pkg.github.com
+  DOCKER_REG: docker.io
 jobs:
 
   build:
@@ -16,13 +19,32 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
 
-    - name: Get dependencies
-      run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
+#   - name: Build Docker Image and Push @ Github-Registry
+#     run: |
+#       REPO=`echo ${{github.repository}} | tr '[:upper:]' '[:lower:]'`
+#       REF=`echo ${{github.ref}} | awk -F/ '{print $NF}'`
 
-    - name: Build
-      run: go build -v .
+#       CONTAINER_IMAGE=$DOCKER_REG/$REPO/img:${{ github.sha }}
+#       CONTAINER_IMAGE_ALIAS=$DOCKER_REG/$REPO/img:$REF
+
+#       echo '${{ secrets.GITHUB_TOKEN }}' | docker login --username=${{ github.actor }} $DOCKER_REG --password-stdin
+
+#       docker build . -t $CONTAINER_IMAGE
+#       docker push $CONTAINER_IMAGE
+#       docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE_ALIAS
+#       docker push $CONTAINER_IMAGE_ALIAS
+
+    - name: Build Docker Image and Push @ Dockerhub
+      run: |
+        REPO="diveinto/nights-watch"
+        REF=`echo ${{github.ref}} | awk -F/ '{print $NF}'`
+
+        CONTAINER_IMAGE=$DOCKER_REG/$REPO:${{ github.sha }}
+        CONTAINER_IMAGE_ALIAS=$DOCKER_REG/$REPO:$REF
+
+        echo '${{ secrets.DOCKERHUB_TOKEN }}' | docker login --username=${{ secrets.DOCKERHUB_USERNAME }} $DOCKER_REG --password-stdin
+
+        docker build . -t $CONTAINER_IMAGE
+        docker push $CONTAINER_IMAGE
+        docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE_ALIAS
+        docker push $CONTAINER_IMAGE_ALIAS

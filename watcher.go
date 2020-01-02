@@ -36,6 +36,7 @@ type AbstractWatcher struct {
 	ReceiptCatchUpFromBlock uint64
 
 	sleepSecondsForNewBlock int
+	wg                      sync.WaitGroup
 }
 
 func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
@@ -51,6 +52,7 @@ func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
 		SyncedTxAndReceipts:     list.New(),
 		MaxSyncedBlockToKeep:    64,
 		sleepSecondsForNewBlock: 5,
+		wg:                      sync.WaitGroup{},
 	}
 }
 
@@ -78,9 +80,8 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 // start sync from given block
 // 0 means start from latest block
 func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error {
-	wg := sync.WaitGroup{}
 
-	wg.Add(1)
+	watcher.wg.Add(1)
 	go func() {
 		for block := range watcher.NewBlockChan {
 			// run thru block plugins
@@ -102,10 +103,10 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
-		wg.Done()
+		watcher.wg.Done()
 	}()
 
-	wg.Add(1)
+	watcher.wg.Add(1)
 	go func() {
 		for removableTxAndReceipt := range watcher.NewTxAndReceiptChan {
 
@@ -124,10 +125,10 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
-		wg.Done()
+		watcher.wg.Done()
 	}()
 
-	wg.Add(1)
+	watcher.wg.Add(1)
 	go func() {
 		for removableReceiptLog := range watcher.NewReceiptLogChan {
 			logrus.Debugf("get receipt log from chan: %+v, txHash: %s", removableReceiptLog, removableReceiptLog.IReceiptLog.GetTransactionHash())
@@ -145,7 +146,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
-		wg.Done()
+		watcher.wg.Done()
 	}()
 
 	for {
@@ -165,23 +166,22 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			logrus.Debugf("no new block to sync, sleep for %d secs", watcher.sleepSecondsForNewBlock)
 
 			// sleep for 3 secs
-			timer := time.NewTimer(time.Duration(watcher.sleepSecondsForNewBlock) * time.Second)
-			<-timer.C
-
-			continue
+			select {
+			case <-watcher.Ctx.Done():
+				closeWatcher(watcher)
+				return nil
+			case <-time.After(time.Duration(watcher.sleepSecondsForNewBlock) * time.Second):
+				continue
+			}
 		}
 
 		for watcher.LatestSyncedBlockNum() < latestBlockNum {
 			select {
 			case <-watcher.Ctx.Done():
 				logrus.Info("watcher context down, closing channels to exit...")
-				close(watcher.NewBlockChan)
-				close(watcher.NewTxAndReceiptChan)
-				close(watcher.NewReceiptLogChan)
-
-				wg.Wait()
-
+				closeWatcher(watcher)
 				logrus.Info("watcher done!")
+
 				return nil
 			default:
 				var newBlockNumToSync uint64
@@ -217,6 +217,14 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 	}
+}
+
+func closeWatcher(w *AbstractWatcher) {
+	close(w.NewBlockChan)
+	close(w.NewTxAndReceiptChan)
+	close(w.NewReceiptLogChan)
+
+	w.wg.Wait()
 }
 
 func (watcher *AbstractWatcher) SetSleepSecondsForNewBlock(sec int) {
