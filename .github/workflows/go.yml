@@ -38,7 +38,7 @@ jobs:
     - name: Build Docker Image and Push
       run: |
         REPO=`echo ${{github.repository}} | tr '[:upper:]' '[:lower:]'`
-        REF=`echo ${{github.ref}} | awk -F/ '{print $NF}'` | tr -cd '[:alnum:]._-'
+        REF=`echo ${{github.ref}} | awk -F/ '{print $NF}'`
 
         CONTAINER_IMAGE=$DOCKER_REG/$REPO/img:${{ github.sha }}
         CONTAINER_IMAGE_ALIAS=$DOCKER_REG/$REPO/img:$REF
