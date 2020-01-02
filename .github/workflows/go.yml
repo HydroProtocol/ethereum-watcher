@@ -1,5 +1,7 @@
 name: Go
 on: [push]
+env:
+  DOCKER_REG: docker.pkg.github.com
 jobs:
 
   build:
@@ -26,3 +28,24 @@ jobs:
 
     - name: Build
       run: go build -v .
+
+    - uses: azure/docker-login@v1
+      with:
+          login-server: $DOCKER_REG
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Docker Image and Push
+      run: |
+        REPO=`echo ${{github.repository}} | tr '[:upper:]' '[:lower:]'`
+        REF=`echo ${{github.ref}} | awk -F/ '{print $NF}'`
+
+        CONTAINER_IMAGE=$DOCKER_REG/$REPO:${{ github.sha }}
+        CONTAINER_IMAGE_ALIAS=$DOCKER_REG/$REPO:$REF
+
+        #echo '${{ secrets.github_docker_reg_password }}' | docker login --username=${{ secrets.github_docker_reg_username }} $DOCKER_REG --password-stdin
+
+        docker build . -t $CONTAINER_IMAGE
+        docker push $CONTAINER_IMAGE
+        docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE_ALIAS
+        docker push $CONTAINER_IMAGE_ALIAS
