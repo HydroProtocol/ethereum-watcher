@@ -19,7 +19,7 @@ Run `go get github.com/HydroProtocol/nights-watch`
 
 # How to run
 
-this project is mainly used as a library, while in order to help you know what this project is and what it capable of, we prepared some tiny commands for you to try out.
+this project is mainly used as a library, while to help you know what this project is and what it capable of, we prepared some commands for you to try out.
 
 ```shell
 # look for help
