@@ -2,26 +2,27 @@
 
 ![](https://github.com/HydroProtocol/nights-watch/workflows/Go/badge.svg)
 
-nights-watch is an event listener for Ethereum written in Golang.
+nights-watch is an event listener for the [Ethereum Blockchain](https://ethereum.org/) written in Golang. With nights-watch you can monitor and track current or historic events that occur on the Ethereum Blockchain.
 
-# Why build this?
+## Background
 
-Many backend services at Hydro need to know things are changed on the blockchain. They may be some events or transaction results. 
+Many applications that interact with the Ethereum Blockchain need to know when specific actions occur on the chain, but cannot directly access the on-chain data. nights-watch acts as an interface between application and chain: gathering specified data from the blockchain so that applications can more seamlessly interact with on-chain events.
 
-# Features
 
-1. Plug-in friendly. It easy to add a plugin to listen on a sort of events.
-2. Fork Tolerance. If a fork occurs, a revert message will bet sent to the subscriber.
+## Features
 
-# Install
+1. Plug-in friendly. You can easily add a plugin to nights-watch to listen to any type of on-chain event.
+2. Fork Tolerance. If a [fork](https://en.wikipedia.org/wiki/Fork_(blockchain)) occurs, a revert message is sent to the subscriber.
+
+# Installation
 
 Run `go get github.com/HydroProtocol/nights-watch`
 
-# How to run
+## Sample Commands
 
-this project is mainly used as a library, while to help you know what this project is and what it capable of, we prepared some commands for you to try out.
+This project is primarily designed as a library to build upon. However, to help others easily understand how nights-watch works and what it is capable of, we prepared some sample commands for you to try out.
 
-**check out help**
+**display basic help info**
 
 ```shell
 docker run diveinto/nights-watch:master /bin/nights-watch help
@@ -44,7 +45,7 @@ docker run diveinto/nights-watch:master /bin/nights-watch usdt-transfer
 ```
 ![](http://wx4.sinaimg.cn/large/6272aa65ly1gaj59yks3vj214g0antco.jpg)
 
-**see your interested events from smart contract, the example shows the Transfer & Approve events from Multi-Collateral-DAI**
+**see specific events that occur within a smart contract. The example shows Transfer & Approve events from Multi-Collateral-DAI**
 
 ```shell
 docker run diveinto/nights-watch:master /bin/nights-watch contract-event-listener \
@@ -53,27 +54,27 @@ docker run diveinto/nights-watch:master /bin/nights-watch contract-event-listene
 ```
 ![Screen Shot 2020-01-03 at 10 36 20 AM](https://user-images.githubusercontent.com/698482/71704362-e6863480-2e14-11ea-8daa-78f9b1bfa243.png)
 
-# How to use
+# Usage
 
-the most two important structs we provide are:
+To effectively use nights-watch, you will be interacting with two primary structs:
 
 - Watcher
 - ReceiptLogWatcher
 
 ## Watcher
 
-`Watcher` is an HTTP client keeps polling for newly mined blocks on Ethereum, we can register various kinds of plugins into `Watcher`, including:
+`Watcher` is an HTTP client which continuously polls newly mined blocks on the Ethereum Blockchain. We can incorporate various kinds of "plugins" into `Watcher`, which will poll for specific types of events and data, such as:
 
 - BlockPlugin
 - TransactionPlugin
 - TransactionReceiptPlugin
 - ReceiptLogPlugin
 
-Once the `Watcher` sees a new block, it will parse the info and feed the data into the registered plugins, you can see the code examples [below](#example-of-watcher).
+Once the `Watcher` sees a new block, it will parse the info and feed the data into the registered plugins. You can see some of the code examples [below](#watcher-examples).
 
-One Interesting thing about plugins is that you can create your plugin based on provided ones, for example, as the code is shown [below](#listen-for-new-erc20-transfer-events), we register an `ERC20TransferPlugin` to show new ERC20 Transfer Events, this plugin is based on `TransactionReceiptPlugin`, what we do in it is simply parse the receipts info from `TransactionReceiptPlugin`. So if you want to show more info than `ERC20TransferPlugin`, for example, the gas used for this transfer transaction, you can easily create a `BetterERC20TransferPlugin` showing that.
+The plugins are designed to be easily modifiable so that you can create your own plugin based on the provided ones. For example, the code shown [below](#listen-for-new-erc20-transfer-events) registers an `ERC20TransferPlugin` to show new ERC20 Transfer Events. This plugin simply parses some receipt info from a different `TransactionReceiptPlugin`. So if you want to show more info than what the `ERC20TransferPlugin` shows, like the gas used in the transaction, you can easily create a `BetterERC20TransferPlugin` showing that.
 
-### Example of Watcher
+### Watcher Examples
 
 #### Print number of newly mined blocks
 
@@ -133,9 +134,9 @@ func main() {
 
 ## ReceiptLogWatcher
 
-`Watcher` is polling for blocks one by one, so what if we want to query certain events from the latest 10000 blocks? `Watcher` can do that but fetching blocks one by one can be slow. `ReceiptLogWatcher` comes to the rescue.
+`Watcher` is polling for blocks one by one, so what if we want to query certain events from the latest 10000 blocks? `Watcher` can do that but fetching blocks one by one can be slow. `ReceiptLogWatcher` to the rescue!
 
-`ReceiptLogWatcher` makes use of the `eth_getLogs` to query for logs in batch. check out the code [below](#example-of-receiptlogwatcher) to see how to use it.
+`ReceiptLogWatcher` makes use of the `eth_getLogs` to query for logs in a batch. Check out the code [below](#example-of-receiptlogwatcher) to see how to use it.
 
 
 ### Example of ReceiptLogWatcher
