@@ -21,21 +21,37 @@ Run `go get github.com/HydroProtocol/nights-watch`
 
 this project is mainly used as a library, while to help you know what this project is and what it capable of, we prepared some commands for you to try out.
 
+**check out help**
+
 ```shell
-# look for help
-docker run diveinto/nights-watch:master /bin/nights-watch
+docker run diveinto/nights-watch:master /bin/nights-watch help
+```
+![Screen Shot 2020-01-03 at 10 31 24 AM](https://user-images.githubusercontent.com/698482/71704263-40d2c580-2e14-11ea-87be-1e3bcfa775a2.png)
 
-# print new block numbers
+
+**print new block numbers**
+
+```shell
 docker run diveinto/nights-watch:master /bin/nights-watch new-block-number
+```
+![Screen Shot 2020-01-03 at 10 38 58 AM](https://user-images.githubusercontent.com/698482/71704417-44b31780-2e15-11ea-9ff1-178c039cadeb.png)
 
-# see USDT transfer events
+
+**see USDT transfer events**
+
+```shell
 docker run diveinto/nights-watch:master /bin/nights-watch usdt-transfer
+```
+![](http://wx4.sinaimg.cn/large/6272aa65ly1gaj59yks3vj214g0antco.jpg)
 
-# see your interested events from smart contract, the example shows the Transfer & Approve events from Multi-Collateral-DAI
+**see your interested events from smart contract, the example shows the Transfer & Approve events from Multi-Collateral-DAI**
+
+```shell
 docker run diveinto/nights-watch:master /bin/nights-watch contract-event-listener \
     --contract 0x6b175474e89094c44da98b954eedeac495271d0f \
     --events 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
 ```
+![Screen Shot 2020-01-03 at 10 36 20 AM](https://user-images.githubusercontent.com/698482/71704362-e6863480-2e14-11ea-8daa-78f9b1bfa243.png)
 
 # How to use
 
