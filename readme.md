@@ -14,11 +14,11 @@ Many applications that interact with the Ethereum Blockchain need to know when s
 1. Plug-in friendly. You can easily add a plugin to nights-watch to listen to any type of on-chain event.
 2. Fork Tolerance. If a [fork](https://en.wikipedia.org/wiki/Fork_(blockchain)) occurs, a revert message is sent to the subscriber.
 
-## Production User Cases
+## Example Use Cases
 
-- [DefiWatch](https://defiwatch.io/), DefiWatch monitoring states of Ethereum addresses on various DeFi platforms, including DDEX, Compound, DyDx, and Maker. To accomplish this, one critical problem to solve is getting updates from these smart contracts, DefiWatch uses nights-watch to solve the problem, and instead of spending time dealing with serialization/deserialization messages from the Ethereum Node, they can focus on their core logic.   
-- Profit & Loss, for margin users at [ddex.io](https://ddex.io/), we provide P&L for their positions, to update the info as timely as possible, we use nights-watch to listen to variouse updates from the Ethereum, including: onchain price updates, trading actions from users, etc.
-- Eth-Transaction-Watcher, at ddex, to monitoring the on-chain status of trading transactions we sent, we need to know the latest states of these transactions once they are included in newly mined blocks, we do this using `TxReceiptPlugin` of nights-watch.
+- [DefiWatch](https://defiwatch.io/) monitors the state of Ethereum addresses on several DeFi platforms including DDEX, Compound, DyDx, and Maker. It tracks things like loan ROI, current borrows, liquidations, etc. To track all of this on multiple platforms, DefiWatch has to continuously receive updates from their associated smart contracts. This is done using nights-watch instead of spending time dealing with serialization/deserialization messages from the Ethereum Node, so they can focus on their core logic.   
+- Profit & Loss calculations on [DDEX](https://ddex.io). DDEX provides their margin trading users with estimated Profit and Loss (P&L) calculations for their margin positions. To update the P&L as timely and accurately as possible, DDEX uses nights-watch to listen to updates from the Ethereum Blockchain. These updates include: onchain price updates, trading actions from users, and more.
+- DDEX also uses an "Eth-Transaction-Watcher" to monitor the on-chain status of trading transactions. DDEX needs to know the latest states of these transactions once they are included in newly mined blocks, so that the platform properly updates trading balances and histories. This is done using the `TxReceiptPlugin` of nights-watch.
 
 
 # Installation
@@ -115,7 +115,7 @@ INFO[2020-01-07T18:05:29+08:00]   >> tx: https://etherscan.io/tx/0x280eb9556f628
 INFO[2020-01-07T18:05:29+08:00]   >> tx: https://etherscan.io/tx/0xcc5ee10d5ac8f55f51f74b23186052c042ebc5dda61578c1a1038d0b30b6fd91
 ...
 ```
-Notice the flag: `--block-backoff`, with this set, instead of current tracking, we do historic tracking from 100 blocks ago.
+Here the flag `--block-backoff` signals for nights-watch to use historic tracking from 100 blocks ago.
 
 # Usage
 
