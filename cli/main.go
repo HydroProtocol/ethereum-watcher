@@ -6,6 +6,7 @@ import (
 	nights_watch "github.com/HydroProtocol/nights-watch"
 	"github.com/HydroProtocol/nights-watch/blockchain"
 	"github.com/HydroProtocol/nights-watch/plugin"
+	"github.com/HydroProtocol/nights-watch/rpc"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
@@ -18,6 +19,7 @@ const (
 
 var contractAdx string
 var eventSigs []string
+var blockBackoff int
 
 func main() {
 	rootCMD.AddCommand(blockNumCMD)
@@ -27,6 +29,7 @@ func main() {
 	contractEventListenerCMD.MarkFlagRequired("contract")
 	contractEventListenerCMD.Flags().StringArrayVarP(&eventSigs, "events", "e", []string{}, "signatures of events we are interested in")
 	contractEventListenerCMD.MarkFlagRequired("events")
+	contractEventListenerCMD.Flags().IntVar(&blockBackoff, "block-backoff", 0, "how many blocks we go back")
 	rootCMD.AddCommand(contractEventListenerCMD)
 
 	if err := rootCMD.Execute(); err != nil {
@@ -122,6 +125,7 @@ var contractEventListenerCMD = &cobra.Command{
   listen to Transfer & Approve events from Multi-Collateral-DAI
   
   /bin/nights-watch contract-event-listener \
+    --block-backoff 100
     --contract 0x6b175474e89094c44da98b954eedeac495271d0f \
     --events 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -143,10 +147,24 @@ var contractEventListenerCMD = &cobra.Command{
 			return nil
 		}
 
+		startBlockNum := -1
+		if blockBackoff > 0 {
+			rpc := rpc.NewEthRPCWithRetry(api, 3)
+			curBlockNum, err := rpc.GetCurrentBlockNum()
+			if err == nil {
+				startBlockNum = int(curBlockNum) - blockBackoff
+
+				if startBlockNum > 0 {
+					logrus.Infof("--block-backoff activated, we start from block: %d (= %d - %d)",
+						startBlockNum, curBlockNum, blockBackoff)
+				}
+			}
+		}
+
 		receiptLogWatcher := nights_watch.NewReceiptLogWatcher(
 			context.TODO(),
 			api,
-			-1,
+			startBlockNum,
 			contractAdx,
 			eventSigs,
 			handler,
