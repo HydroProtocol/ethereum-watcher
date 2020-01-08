@@ -32,7 +32,7 @@ This project is primarily designed as a library to build upon. However, to help 
 **display basic help info**
 
 ```shell
-docker run diveinto/nights-watch:master /bin/nights-watch help
+docker run hydroprotocolio/nights-watch:master /bin/nights-watch help
 
 nights-watch makes getting updates from Ethereum easier
 
@@ -56,7 +56,7 @@ Use "nights-watch [command] --help" for more information about a command.
 **print new block numbers**
 
 ```shell
-docker run diveinto/nights-watch:master /bin/nights-watch new-block-number
+docker run hydroprotocolio/nights-watch:master /bin/nights-watch new-block-number
 
 time="2020-01-07T07:33:17Z" level=info msg="waiting for new block..."
 time="2020-01-07T07:33:19Z" level=info msg=">> found new block: 9232152, is removed: false"
@@ -72,7 +72,7 @@ time="2020-01-07T07:34:05Z" level=info msg=">> found new block: 9232156, is remo
 **see USDT transfer events**
 
 ```shell
-docker run diveinto/nights-watch:master /bin/nights-watch usdt-transfer
+docker run hydroprotocolio/nights-watch:master /bin/nights-watch usdt-transfer
 
 time="2020-01-07T07:34:32Z" level=info msg="See new USDT Transfer at block: 9232158, count:  9"
 time="2020-01-07T07:34:32Z" level=info msg="  >> tx: https://etherscan.io/tx/0x1072efee913229a5e9a3013af6b580099f03ac9c75bfc60013cfa7efac726067"
@@ -95,7 +95,7 @@ time="2020-01-07T07:34:50Z" level=info msg="  >> tx: https://etherscan.io/tx/0xa
 **see specific events that occur within a smart contract. The example shows Transfer & Approve events from Multi-Collateral-DAI**
 
 ```shell
-docker run diveinto/nights-watch:master /bin/nights-watch contract-event-listener \
+docker run hydroprotocolio/nights-watch:master /bin/nights-watch contract-event-listener \
     --block-backoff 100 \
     --contract 0x6b175474e89094c44da98b954eedeac495271d0f \
     --events 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
