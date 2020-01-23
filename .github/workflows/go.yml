@@ -36,7 +36,7 @@ jobs:
 
     - name: Build Docker Image and Push @ Dockerhub
       run: |
-        REPO="hydroprotocolio/nights-watch"
+        REPO="hydroprotocolio/ethereum-watcher"
         REF=`echo ${{github.ref}} | awk -F/ '{print $NF}'`
 
         CONTAINER_IMAGE=$DOCKER_REG/$REPO:${{ github.sha }}

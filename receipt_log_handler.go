@@ -2,8 +2,8 @@ package nights_watch
 
 import (
 	"context"
-	"github.com/HydroProtocol/nights-watch/rpc"
-	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/HydroProtocol/ethereum-watcher/rpc"
+	"github.com/HydroProtocol/ethereum-watcher/structs"
 	"github.com/sirupsen/logrus"
 	"time"
 )

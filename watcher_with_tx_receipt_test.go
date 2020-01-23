@@ -3,9 +3,9 @@ package nights_watch
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/nights-watch/blockchain"
-	"github.com/HydroProtocol/nights-watch/plugin"
-	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/HydroProtocol/ethereum-watcher/blockchain"
+	"github.com/HydroProtocol/ethereum-watcher/plugin"
+	"github.com/HydroProtocol/ethereum-watcher/structs"
 	"github.com/labstack/gommon/log"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"

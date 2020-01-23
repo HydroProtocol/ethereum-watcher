@@ -1,43 +1,43 @@
-# nights-watch
+# ethereum-watcher
 
-![](https://github.com/HydroProtocol/nights-watch/workflows/Go/badge.svg)
+![](https://github.com/HydroProtocol/ethereum-watcher/workflows/Go/badge.svg)
 
-nights-watch is an event listener for the [Ethereum Blockchain](https://ethereum.org/) written in Golang. With nights-watch you can monitor and track current or historic events that occur on the Ethereum Blockchain.
+ethereum-watcher is an event listener for the [Ethereum Blockchain](https://ethereum.org/) written in Golang. With ethereum-watcher you can monitor and track current or historic events that occur on the Ethereum Blockchain.
 
 ## Background
 
-Many applications that interact with the Ethereum Blockchain need to know when specific actions occur on the chain, but cannot directly access the on-chain data. nights-watch acts as an interface between application and chain: gathering specified data from the blockchain so that applications can more seamlessly interact with on-chain events.
+Many applications that interact with the Ethereum Blockchain need to know when specific actions occur on the chain, but cannot directly access the on-chain data. ethereum-watcher acts as an interface between application and chain: gathering specified data from the blockchain so that applications can more seamlessly interact with on-chain events.
 
 
 ## Features
 
-1. Plug-in friendly. You can easily add a plugin to nights-watch to listen to any type of on-chain event.
+1. Plug-in friendly. You can easily add a plugin to ethereum-watcher to listen to any type of on-chain event.
 2. Fork Tolerance. If a [fork](https://en.wikipedia.org/wiki/Fork_(blockchain)) occurs, a revert message is sent to the subscriber.
 
 ## Example Use Cases
 
-- [DefiWatch](https://defiwatch.io/) monitors the state of Ethereum addresses on several DeFi platforms including DDEX, Compound, DyDx, and Maker. It tracks things like loan ROI, current borrows, liquidations, etc. To track all of this on multiple platforms, DefiWatch has to continuously receive updates from their associated smart contracts. This is done using nights-watch instead of spending time dealing with serialization/deserialization messages from the Ethereum Node, so they can focus on their core logic.   
-- Profit & Loss calculations on [DDEX](https://ddex.io). DDEX provides their margin trading users with estimated Profit and Loss (P&L) calculations for their margin positions. To update the P&L as timely and accurately as possible, DDEX uses nights-watch to listen to updates from the Ethereum Blockchain. These updates include: onchain price updates, trading actions from users, and more.
-- DDEX also uses an "Eth-Transaction-Watcher" to monitor the on-chain status of trading transactions. DDEX needs to know the latest states of these transactions once they are included in newly mined blocks, so that the platform properly updates trading balances and histories. This is done using the `TxReceiptPlugin` of nights-watch.
+- [DefiWatch](https://defiwatch.io/) monitors the state of Ethereum addresses on several DeFi platforms including DDEX, Compound, DyDx, and Maker. It tracks things like loan ROI, current borrows, liquidations, etc. To track all of this on multiple platforms, DefiWatch has to continuously receive updates from their associated smart contracts. This is done using ethereum-watcher instead of spending time dealing with serialization/deserialization messages from the Ethereum Node, so they can focus on their core logic.   
+- Profit & Loss calculations on [DDEX](https://ddex.io). DDEX provides their margin trading users with estimated Profit and Loss (P&L) calculations for their margin positions. To update the P&L as timely and accurately as possible, DDEX uses ethereum-watcher to listen to updates from the Ethereum Blockchain. These updates include: onchain price updates, trading actions from users, and more.
+- DDEX also uses an "Eth-Transaction-Watcher" to monitor the on-chain status of trading transactions. DDEX needs to know the latest states of these transactions once they are included in newly mined blocks, so that the platform properly updates trading balances and histories. This is done using the `TxReceiptPlugin` of ethereum-watcher.
 
 
 # Installation
 
-Run `go get github.com/HydroProtocol/nights-watch`
+Run `go get github.com/HydroProtocol/ethereum-watcher`
 
 ## Sample Commands
 
-This project is primarily designed as a library to build upon. However, to help others easily understand how nights-watch works and what it is capable of, we prepared some sample commands for you to try out.
+This project is primarily designed as a library to build upon. However, to help others easily understand how ethereum-watcher works and what it is capable of, we prepared some sample commands for you to try out.
 
 **display basic help info**
 
 ```shell
-docker run hydroprotocolio/nights-watch:master /bin/nights-watch help
+docker run hydroprotocolio/ethereum-watcher:master /bin/ethereum-watcher help
 
-nights-watch makes getting updates from Ethereum easier
+ethereum-watcher makes getting updates from Ethereum easier
 
 Usage:
-  nights-watch [command]
+  ethereum-watcher [command]
 
 Available Commands:
   contract-event-listener listen and print events from contract
@@ -46,9 +46,9 @@ Available Commands:
   usdt-transfer           Show Transfer Event of USDT
 
 Flags:
-  -h, --help   help for nights-watch
+  -h, --help   help for ethereum-watcher
 
-Use "nights-watch [command] --help" for more information about a command.
+Use "ethereum-watcher [command] --help" for more information about a command.
 ```
 
 
@@ -56,7 +56,7 @@ Use "nights-watch [command] --help" for more information about a command.
 **print new block numbers**
 
 ```shell
-docker run hydroprotocolio/nights-watch:master /bin/nights-watch new-block-number
+docker run hydroprotocolio/ethereum-watcher:master /bin/ethereum-watcher new-block-number
 
 time="2020-01-07T07:33:17Z" level=info msg="waiting for new block..."
 time="2020-01-07T07:33:19Z" level=info msg=">> found new block: 9232152, is removed: false"
@@ -72,7 +72,7 @@ time="2020-01-07T07:34:05Z" level=info msg=">> found new block: 9232156, is remo
 **see USDT transfer events**
 
 ```shell
-docker run hydroprotocolio/nights-watch:master /bin/nights-watch usdt-transfer
+docker run hydroprotocolio/ethereum-watcher:master /bin/ethereum-watcher usdt-transfer
 
 time="2020-01-07T07:34:32Z" level=info msg="See new USDT Transfer at block: 9232158, count:  9"
 time="2020-01-07T07:34:32Z" level=info msg="  >> tx: https://etherscan.io/tx/0x1072efee913229a5e9a3013af6b580099f03ac9c75bfc60013cfa7efac726067"
@@ -95,7 +95,7 @@ time="2020-01-07T07:34:50Z" level=info msg="  >> tx: https://etherscan.io/tx/0xa
 **see specific events that occur within a smart contract. The example shows Transfer & Approve events from Multi-Collateral-DAI**
 
 ```shell
-docker run hydroprotocolio/nights-watch:master /bin/nights-watch contract-event-listener \
+docker run hydroprotocolio/ethereum-watcher:master /bin/ethereum-watcher contract-event-listener \
     --block-backoff 100 \
     --contract 0x6b175474e89094c44da98b954eedeac495271d0f \
     --events 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
@@ -115,11 +115,11 @@ INFO[2020-01-07T18:05:29+08:00]   >> tx: https://etherscan.io/tx/0x280eb9556f628
 INFO[2020-01-07T18:05:29+08:00]   >> tx: https://etherscan.io/tx/0xcc5ee10d5ac8f55f51f74b23186052c042ebc5dda61578c1a1038d0b30b6fd91
 ...
 ```
-Here the flag `--block-backoff` signals for nights-watch to use historic tracking from 100 blocks ago.
+Here the flag `--block-backoff` signals for ethereum-watcher to use historic tracking from 100 blocks ago.
 
 # Usage
 
-To effectively use nights-watch, you will be interacting with two primary structs:
+To effectively use ethereum-watcher, you will be interacting with two primary structs:
 
 - Watcher
 - ReceiptLogWatcher
@@ -147,8 +147,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/nights-watch/plugin"
-	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/HydroProtocol/ethereum-watcher/plugin"
+	"github.com/HydroProtocol/ethereum-watcher/structs"
 )
 
 func main() {
@@ -172,8 +172,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/nights-watch/plugin"
-	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/HydroProtocol/ethereum-watcher/plugin"
+	"github.com/HydroProtocol/ethereum-watcher/structs"
 	"github.com/sirupsen/logrus"
 )
 
@@ -209,7 +209,7 @@ package main
 
 import (
 	"context"
-	"github.com/HydroProtocol/nights-watch/blockchain"
+	"github.com/HydroProtocol/ethereum-watcher/blockchain"
 	"github.com/sirupsen/logrus"
 )
 

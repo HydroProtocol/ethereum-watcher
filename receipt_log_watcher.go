@@ -3,8 +3,8 @@ package nights_watch
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/nights-watch/blockchain"
-	"github.com/HydroProtocol/nights-watch/rpc"
+	"github.com/HydroProtocol/ethereum-watcher/blockchain"
+	"github.com/HydroProtocol/ethereum-watcher/rpc"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
