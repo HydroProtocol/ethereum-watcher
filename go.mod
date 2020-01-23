@@ -3,7 +3,7 @@ module github.com/HydroProtocol/ethereum-watcher
 go 1.12
 
 require (
-	github.com/HydroProtocol/ethereum-watcher v0.4.0
+	github.com/HydroProtocol/ethereum-watcher v0.5.0
 	github.com/btcsuite/btcd v0.0.0-20190115013929-ed77733ec07d
 	github.com/labstack/gommon v0.2.8
 	github.com/mattn/go-colorable v0.1.4 // indirect

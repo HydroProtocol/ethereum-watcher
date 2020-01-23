@@ -1,4 +1,4 @@
-package nights_watch
+package ethereum_watcher
 
 import (
 	"container/list"

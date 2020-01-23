@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	nights_watch "github.com/HydroProtocol/ethereum-watcher"
+	ethereum_watcher "github.com/HydroProtocol/ethereum-watcher"
 	"github.com/HydroProtocol/ethereum-watcher/blockchain"
 	"github.com/HydroProtocol/ethereum-watcher/plugin"
 	"github.com/HydroProtocol/ethereum-watcher/rpc"
@@ -52,7 +52,7 @@ var blockNumCMD = &cobra.Command{
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)
 
-		w := nights_watch.NewHttpBasedEthWatcher(ctx, api)
+		w := ethereum_watcher.NewHttpBasedEthWatcher(ctx, api)
 
 		logrus.Println("waiting for new block...")
 		w.RegisterBlockPlugin(plugin.NewBlockNumPlugin(func(i uint64, b bool) {
@@ -99,14 +99,14 @@ var usdtTransferCMD = &cobra.Command{
 			return nil
 		}
 
-		receiptLogWatcher := nights_watch.NewReceiptLogWatcher(
+		receiptLogWatcher := ethereum_watcher.NewReceiptLogWatcher(
 			context.TODO(),
 			api,
 			-1,
 			usdtContractAdx,
 			topicsInterestedIn,
 			handler,
-			nights_watch.ReceiptLogWatcherConfig{
+			ethereum_watcher.ReceiptLogWatcherConfig{
 				StepSizeForBigLag:               5,
 				IntervalForPollingNewBlockInSec: 5,
 				RPCMaxRetry:                     3,
@@ -161,14 +161,14 @@ var contractEventListenerCMD = &cobra.Command{
 			}
 		}
 
-		receiptLogWatcher := nights_watch.NewReceiptLogWatcher(
+		receiptLogWatcher := ethereum_watcher.NewReceiptLogWatcher(
 			context.TODO(),
 			api,
 			startBlockNum,
 			contractAdx,
 			eventSigs,
 			handler,
-			nights_watch.ReceiptLogWatcherConfig{
+			ethereum_watcher.ReceiptLogWatcherConfig{
 				StepSizeForBigLag:               5,
 				IntervalForPollingNewBlockInSec: 5,
 				RPCMaxRetry:                     3,
