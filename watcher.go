@@ -1,14 +1,14 @@
-package nights_watch
+package ethereum_watcher
 
 import (
 	"container/list"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/HydroProtocol/nights-watch/blockchain"
-	"github.com/HydroProtocol/nights-watch/plugin"
-	"github.com/HydroProtocol/nights-watch/rpc"
-	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/HydroProtocol/ethereum-watcher/blockchain"
+	"github.com/HydroProtocol/ethereum-watcher/plugin"
+	"github.com/HydroProtocol/ethereum-watcher/rpc"
+	"github.com/HydroProtocol/ethereum-watcher/structs"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"

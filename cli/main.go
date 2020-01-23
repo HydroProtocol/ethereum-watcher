@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	nights_watch "github.com/HydroProtocol/nights-watch"
-	"github.com/HydroProtocol/nights-watch/blockchain"
-	"github.com/HydroProtocol/nights-watch/plugin"
-	"github.com/HydroProtocol/nights-watch/rpc"
+	"github.com/HydroProtocol/ethereum-watcher"
+	"github.com/HydroProtocol/ethereum-watcher/blockchain"
+	"github.com/HydroProtocol/ethereum-watcher/plugin"
+	"github.com/HydroProtocol/ethereum-watcher/rpc"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
@@ -39,8 +39,8 @@ func main() {
 }
 
 var rootCMD = &cobra.Command{
-	Use:   "nights-watch",
-	Short: "nights-watch makes getting updates from Ethereum easier",
+	Use:   "ethereum-watcher",
+	Short: "ethereum-watcher makes getting updates from Ethereum easier",
 }
 
 var blockNumCMD = &cobra.Command{
@@ -52,7 +52,7 @@ var blockNumCMD = &cobra.Command{
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)
 
-		w := nights_watch.NewHttpBasedEthWatcher(ctx, api)
+		w := ethereum_watcher.NewHttpBasedEthWatcher(ctx, api)
 
 		logrus.Println("waiting for new block...")
 		w.RegisterBlockPlugin(plugin.NewBlockNumPlugin(func(i uint64, b bool) {
@@ -99,14 +99,14 @@ var usdtTransferCMD = &cobra.Command{
 			return nil
 		}
 
-		receiptLogWatcher := nights_watch.NewReceiptLogWatcher(
+		receiptLogWatcher := ethereum_watcher.NewReceiptLogWatcher(
 			context.TODO(),
 			api,
 			-1,
 			usdtContractAdx,
 			topicsInterestedIn,
 			handler,
-			nights_watch.ReceiptLogWatcherConfig{
+			ethereum_watcher.ReceiptLogWatcherConfig{
 				StepSizeForBigLag:               5,
 				IntervalForPollingNewBlockInSec: 5,
 				RPCMaxRetry:                     3,
@@ -124,7 +124,7 @@ var contractEventListenerCMD = &cobra.Command{
 	Example: `
   listen to Transfer & Approve events from Multi-Collateral-DAI
   
-  /bin/nights-watch contract-event-listener \
+  /bin/ethereum-watcher contract-event-listener \
     --block-backoff 100
     --contract 0x6b175474e89094c44da98b954eedeac495271d0f \
     --events 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`,
@@ -161,14 +161,14 @@ var contractEventListenerCMD = &cobra.Command{
 			}
 		}
 
-		receiptLogWatcher := nights_watch.NewReceiptLogWatcher(
+		receiptLogWatcher := ethereum_watcher.NewReceiptLogWatcher(
 			context.TODO(),
 			api,
 			startBlockNum,
 			contractAdx,
 			eventSigs,
 			handler,
-			nights_watch.ReceiptLogWatcherConfig{
+			ethereum_watcher.ReceiptLogWatcherConfig{
 				StepSizeForBigLag:               5,
 				IntervalForPollingNewBlockInSec: 5,
 				RPCMaxRetry:                     3,

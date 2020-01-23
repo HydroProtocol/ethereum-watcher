@@ -1,10 +1,10 @@
-package nights_watch
+package ethereum_watcher
 
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/nights-watch/plugin"
-	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/HydroProtocol/ethereum-watcher/plugin"
+	"github.com/HydroProtocol/ethereum-watcher/structs"
 	"github.com/sirupsen/logrus"
 	"testing"
 )

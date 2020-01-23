@@ -1,7 +1,7 @@
 package plugin
 
 import (
-	"github.com/HydroProtocol/nights-watch/structs"
+	"github.com/HydroProtocol/ethereum-watcher/structs"
 	"strings"
 )
 
