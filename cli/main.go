@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	ethereum_watcher "github.com/HydroProtocol/ethereum-watcher"
+	"github.com/HydroProtocol/ethereum-watcher"
 	"github.com/HydroProtocol/ethereum-watcher/blockchain"
 	"github.com/HydroProtocol/ethereum-watcher/plugin"
 	"github.com/HydroProtocol/ethereum-watcher/rpc"
