@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"github.com/HydroProtocol/ethereum-watcher/blockchain"
+	"github.com/rakshasa/ethereum-watcher/blockchain"
 	"time"
 )
 
