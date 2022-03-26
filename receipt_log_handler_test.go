@@ -2,8 +2,8 @@ package ethereum_watcher
 
 import (
 	"context"
-	"github.com/HydroProtocol/ethereum-watcher/rpc"
-	"github.com/HydroProtocol/ethereum-watcher/structs"
+	"github.com/rakshasa/ethereum-watcher/rpc"
+	"github.com/rakshasa/ethereum-watcher/structs"
 	"github.com/sirupsen/logrus"
 	"testing"
 )

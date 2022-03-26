@@ -3,8 +3,8 @@ package ethereum_watcher
 import (
 	"context"
 	"fmt"
-	"github.com/HydroProtocol/ethereum-watcher/blockchain"
-	"github.com/HydroProtocol/ethereum-watcher/rpc"
+	"github.com/rakshasa/ethereum-watcher/blockchain"
+	"github.com/rakshasa/ethereum-watcher/rpc"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"

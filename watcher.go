@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HydroProtocol/ethereum-watcher/blockchain"
-	"github.com/HydroProtocol/ethereum-watcher/plugin"
-	"github.com/HydroProtocol/ethereum-watcher/rpc"
-	"github.com/HydroProtocol/ethereum-watcher/structs"
+	"github.com/rakshasa/ethereum-watcher/blockchain"
+	"github.com/rakshasa/ethereum-watcher/plugin"
+	"github.com/rakshasa/ethereum-watcher/rpc"
+	"github.com/rakshasa/ethereum-watcher/structs"
 	"github.com/sirupsen/logrus"
 )
 
