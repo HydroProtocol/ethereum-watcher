@@ -3,7 +3,6 @@ package ethereum_watcher
 import (
 	"container/list"
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -172,6 +171,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 
 		latestBlockNum, err := watcher.rpc.GetCurrentBlockNum()
 		if err != nil {
+			logrus.Debugf("ethereum watcher failed to get current block number: %v", err)
 			return err
 		}
 
@@ -215,24 +215,27 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 
 				newBlock, err := watcher.rpc.GetBlockByNum(newBlockNumToSync)
 				if err != nil {
-					return err
+					return fmt.Errorf("rpc.GetBlockByNum: %w", err)
 				}
 
 				if newBlock == nil {
-					msg := fmt.Sprintf("GetBlockByNum(%d) returns nil block", newBlockNumToSync)
-					return errors.New(msg)
+					return fmt.Errorf("GetBlockByNum(%d) returns nil block", newBlockNumToSync)
 				}
 
 				if watcher.FoundFork(newBlock) {
-					logrus.Infoln("found fork, popping")
-					err = watcher.popBlocksUntilReachMainChain()
-				} else {
-					logrus.Debugln("adding new block:", newBlock.Number())
-					err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false), latestBlockNum)
+					logrus.Infof("found fork, popping")
+
+					if err = watcher.popBlocksUntilReachMainChain(); err != nil {
+						return fmt.Errorf("popBlocksUntilReachMainChain: %w", err)
+					}
+
+					continue
 				}
 
-				if err != nil {
-					return err
+				logrus.Debugf("adding new block: %d", newBlock.Number())
+
+				if err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false), latestBlockNum); err != nil {
+					return fmt.Errorf("addNewBlock: %w", err)
 				}
 			}
 		}
