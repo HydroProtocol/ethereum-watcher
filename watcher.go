@@ -89,6 +89,8 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 
 	watcher.wg.Add(1)
 	go func() {
+		logrus.Debugf("ethereum watcher started waiting for new blocks")
+
 		for block := range watcher.NewBlockChan {
 			// run thru block plugins
 			for i := 0; i < len(watcher.BlockPlugins); i++ {
@@ -109,11 +111,15 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
+		logrus.Debugf("ethereum watcher done waiting for new blocks")
+
 		watcher.wg.Done()
 	}()
 
 	watcher.wg.Add(1)
 	go func() {
+		logrus.Debugf("ethereum watcher started waiting for new transactions and receipts")
+
 		for removableTxAndReceipt := range watcher.NewTxAndReceiptChan {
 
 			txReceiptPlugins := watcher.TxReceiptPlugins
@@ -131,11 +137,15 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
+		logrus.Debugf("ethereum watcher done waiting for new transactions and receipts")
+
 		watcher.wg.Done()
 	}()
 
 	watcher.wg.Add(1)
 	go func() {
+		logrus.Debugf("ethereum watcher started waiting for new receipt logs")
+
 		for removableReceiptLog := range watcher.NewReceiptLogChan {
 			logrus.Debugf("get receipt log from chan: %+v, txHash: %s", removableReceiptLog, removableReceiptLog.IReceiptLog.GetTransactionHash())
 
@@ -152,10 +162,14 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
+		logrus.Debugf("ethereum watcher done waiting for new receipt logs")
+
 		watcher.wg.Done()
 	}()
 
 	for {
+		logrus.Debugf("ethereum watcher handling events...")
+
 		latestBlockNum, err := watcher.rpc.GetCurrentBlockNum()
 		if err != nil {
 			return err
