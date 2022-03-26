@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/HydroProtocol/ethereum-watcher/blockchain"
 	"github.com/HydroProtocol/ethereum-watcher/plugin"
 	"github.com/HydroProtocol/ethereum-watcher/rpc"
 	"github.com/HydroProtocol/ethereum-watcher/structs"
 	"github.com/sirupsen/logrus"
-	"sync"
-	"time"
 )
 
 type AbstractWatcher struct {
@@ -80,6 +81,11 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 // start sync from given block
 // 0 means start from latest block
 func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error {
+	if startBlockNum == 0 {
+		logrus.Debugf("ethereum watcher is running until exit from latest block")
+	} else {
+		logrus.Debugf("ethereum watcher is running until exit from block %d", startBlockNum)
+	}
 
 	watcher.wg.Add(1)
 	go func() {
