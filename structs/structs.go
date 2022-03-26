@@ -1,7 +1,7 @@
 package structs
 
 import (
-	"github.com/HydroProtocol/ethereum-watcher/blockchain"
+	"github.com/rakshasa/ethereum-watcher/blockchain"
 )
 
 type RemovableBlock struct {

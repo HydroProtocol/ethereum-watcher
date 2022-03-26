@@ -3,7 +3,7 @@ package blockchain
 import (
 	"errors"
 	"fmt"
-	"github.com/HydroProtocol/ethereum-watcher/utils"
+	"github.com/rakshasa/ethereum-watcher/utils"
 	"github.com/labstack/gommon/log"
 	"github.com/onrik/ethrpc"
 	"github.com/shopspring/decimal"
