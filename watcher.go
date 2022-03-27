@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onrik/ethrpc"
 	"github.com/rakshasa/ethereum-watcher/blockchain"
 	"github.com/rakshasa/ethereum-watcher/plugin"
 	"github.com/rakshasa/ethereum-watcher/rpc"
@@ -39,8 +40,8 @@ type AbstractWatcher struct {
 	wg                      sync.WaitGroup
 }
 
-func NewHttpBasedEthWatcher(ctx context.Context, api string) *AbstractWatcher {
-	rpc := rpc.NewEthRPCWithRetry(api, 5)
+func NewHttpBasedEthWatcher(ctx context.Context, api string, options ...func(rpc *ethrpc.EthRPC)) *AbstractWatcher {
+	rpc := rpc.NewEthRPCWithRetry(api, 5, options...)
 
 	return &AbstractWatcher{
 		Ctx:                     ctx,
@@ -171,8 +172,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 
 		latestBlockNum, err := watcher.rpc.GetCurrentBlockNum()
 		if err != nil {
-			logrus.Debugf("ethereum watcher failed to get current block number: %v", err)
-			return err
+			return fmt.Errorf("rpc.GetCurrentBlockNum: %w", err)
 		}
 
 		if startBlockNum <= 0 {

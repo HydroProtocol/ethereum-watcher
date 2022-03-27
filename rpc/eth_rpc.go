@@ -2,18 +2,19 @@ package rpc
 
 import (
 	"errors"
-	"github.com/rakshasa/ethereum-watcher/blockchain"
-	"github.com/onrik/ethrpc"
-	"github.com/sirupsen/logrus"
 	"strconv"
+
+	"github.com/onrik/ethrpc"
+	"github.com/rakshasa/ethereum-watcher/blockchain"
+	"github.com/sirupsen/logrus"
 )
 
 type EthBlockChainRPC struct {
 	rpcImpl *ethrpc.EthRPC
 }
 
-func NewEthRPC(api string) *EthBlockChainRPC {
-	rpc := ethrpc.New(api)
+func NewEthRPC(api string, options ...func(rpc *ethrpc.EthRPC)) *EthBlockChainRPC {
+	rpc := ethrpc.New(api, options...)
 
 	return &EthBlockChainRPC{rpc}
 }
