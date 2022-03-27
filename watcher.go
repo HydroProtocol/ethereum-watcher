@@ -126,7 +126,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			for i := 0; i < len(txReceiptPlugins); i++ {
 				txReceiptPlugin := txReceiptPlugins[i]
 
-				if p, ok := txReceiptPlugin.(*plugin.TxReceiptPluginWithFilter); ok {
+				if p, ok := txReceiptPlugin.(plugin.ITxReceiptPluginWithFilter); ok {
 					// for filter plugin, only feed receipt it wants
 					if p.NeedReceipt(removableTxAndReceipt.Tx) {
 						txReceiptPlugin.Accept(removableTxAndReceipt)
@@ -274,7 +274,7 @@ func (watcher *AbstractWatcher) needReceipt(tx blockchain.Transaction) bool {
 	plugins := watcher.TxReceiptPlugins
 
 	for _, p := range plugins {
-		if filterPlugin, ok := p.(plugin.TxReceiptPluginWithFilter); ok {
+		if filterPlugin, ok := p.(plugin.ITxReceiptPluginWithFilter); ok {
 			if filterPlugin.NeedReceipt(tx) {
 				return true
 			}

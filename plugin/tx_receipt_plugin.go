@@ -1,14 +1,34 @@
 package plugin
 
 import (
+	"math/big"
+
 	"github.com/rakshasa/ethereum-watcher/blockchain"
 	"github.com/rakshasa/ethereum-watcher/structs"
 	"github.com/shopspring/decimal"
-	"math/big"
 )
 
 type ITxReceiptPlugin interface {
 	Accept(tx *structs.RemovableTxAndReceipt)
+}
+
+type ITxReceiptPluginWithFilter interface {
+	Accept(tx *structs.RemovableTxAndReceipt)
+	NeedReceipt(tx blockchain.Transaction) bool
+}
+
+type TxReceiptPlugin struct {
+	callback func(tx *structs.RemovableTxAndReceipt)
+}
+
+func NewTxReceiptPlugin(callback func(tx *structs.RemovableTxAndReceipt)) *TxReceiptPlugin {
+	return &TxReceiptPlugin{callback}
+}
+
+func (p TxReceiptPlugin) Accept(tx *structs.RemovableTxAndReceipt) {
+	if p.callback != nil {
+		p.callback(tx)
+	}
 }
 
 type TxReceiptPluginWithFilter struct {
@@ -26,20 +46,6 @@ func NewTxReceiptPluginWithFilter(
 
 	p := NewTxReceiptPlugin(callback)
 	return &TxReceiptPluginWithFilter{p, filterFunc}
-}
-
-type TxReceiptPlugin struct {
-	callback func(tx *structs.RemovableTxAndReceipt)
-}
-
-func NewTxReceiptPlugin(callback func(tx *structs.RemovableTxAndReceipt)) *TxReceiptPlugin {
-	return &TxReceiptPlugin{callback}
-}
-
-func (p TxReceiptPlugin) Accept(tx *structs.RemovableTxAndReceipt) {
-	if p.callback != nil {
-		p.callback(tx)
-	}
 }
 
 type ERC20TransferPlugin struct {
