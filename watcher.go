@@ -308,13 +308,15 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 	watcher.lock.Lock()
 	defer watcher.lock.Unlock()
 
+	skippedTxReceiptCount := 0
+
 	// get tx receipts in block, which is time consuming
 	signals := make([]*SyncSignal, 0, len(block.GetTransactions()))
 	for i := 0; i < len(block.GetTransactions()); i++ {
 		tx := block.GetTransactions()[i]
 
 		if !watcher.needReceipt(tx) {
-			logrus.Debugf("no need to get receipt of tx(%s), skipped", tx.GetHash())
+			skippedTxReceiptCount++
 			continue
 		}
 
@@ -352,6 +354,10 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 		if sig.err != nil {
 			return sig.err
 		}
+	}
+
+	if skippedTxReceiptCount != 0 {
+		logrus.Debugf("skipped transaction receipt count: %d", skippedTxReceiptCount)
 	}
 
 	for i := 0; i < len(signals); i++ {
