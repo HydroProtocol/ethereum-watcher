@@ -314,11 +314,11 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 		tx := block.GetTransactions()[i]
 
 		if !watcher.needReceipt(tx) {
-			//logrus.Debugf("no need to get receipt of tx(%s), skipped", tx.GetHash())
+			logrus.Debugf("no need to get receipt of tx(%s), skipped", tx.GetHash())
 			continue
-		} else {
-			logrus.Debugf("needReceipt of tx: %s in block: %d", tx.GetHash(), block.Number())
 		}
+
+		logrus.Debugf("needReceipt of tx: %s in block: %d", tx.GetHash(), block.Number())
 
 		syncSigName := fmt.Sprintf("B:%d T:%s", block.Number(), tx.GetHash())
 
