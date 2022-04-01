@@ -6,6 +6,7 @@ import (
 
 	"github.com/onrik/ethrpc"
 	"github.com/rakshasa/ethereum-watcher/blockchain"
+	"github.com/rakshasa/ethereum-watcher/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -71,19 +72,18 @@ func (rpc EthBlockChainRPC) GetLogs(
 
 	logs, err := rpc.rpcImpl.EthGetLogs(filterParam)
 	if err != nil {
-		logrus.Warnf("EthGetLogs err: %s, params: %+v", err, filterParam)
+		utils.Warnf("eth_getlogs: failed to retrieve logs: %v", err)
 		return nil, err
 	}
 
-	logrus.Debugf("EthGetLogs logs count at block(%d - %d): %d", fromBlockNum, toBlockNum, len(logs))
+	logrus.Tracef("eth_getlogs: log count at block(%d - %d): %d", fromBlockNum, toBlockNum, len(logs))
 
 	var result []blockchain.IReceiptLog
 	for i := 0; i < len(logs); i++ {
 		l := logs[i]
-
-		logrus.Debugf("EthGetLogs receipt log: %+v", l)
-
 		result = append(result, blockchain.ReceiptLog{Log: &l})
+
+		logrus.Tracef("eth_getlogs: receipt log: %+v", l)
 	}
 
 	return result, err

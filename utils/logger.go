@@ -1,41 +1,66 @@
 package utils
 
 import (
-	log "github.com/sirupsen/logrus"
 	"os"
+
+	"github.com/sirupsen/logrus"
+)
+
+// Unless we add custom logging output, only output log levels at or
+// above the global log level.
+
+var (
+	logLevel  = logrus.DebugLevel
+	logPrefix = "ethereumWatcher: "
 )
 
 func init() {
-	switch os.Getenv("HSK_LOG_LEVEL") {
+	switch os.Getenv("ETHEREUM_WATCHER_LOG_LEVEL") {
 	case "FATAL":
-		log.SetLevel(log.FatalLevel)
+		logLevel = logrus.FatalLevel
 	case "ERROR":
-		log.SetLevel(log.ErrorLevel)
+		logLevel = logrus.ErrorLevel
 	case "WARN":
-		log.SetLevel(log.WarnLevel)
+		logLevel = logrus.WarnLevel
 	case "INFO":
-		log.SetLevel(log.InfoLevel)
+		logLevel = logrus.InfoLevel
 	case "DEBUG":
-		log.SetLevel(log.DebugLevel)
+		logLevel = logrus.DebugLevel
 	default:
-		log.SetLevel(log.InfoLevel)
+		logLevel = logrus.TraceLevel
 	}
+}
 
-	formatter := &log.TextFormatter{
-		FullTimestamp: true,
-	}
-
-	log.SetFormatter(formatter)
+func SetCategoryLogLevel(l logrus.Level) {
+	logLevel = l
 }
 
 func Debugf(format string, v ...interface{}) {
-	log.Debugf(format, v...)
-}
-
-func Infof(format string, v ...interface{}) {
-	log.Infof(format, v...)
+	if logLevel <= logrus.DebugLevel {
+		logrus.Debugf(logPrefix+format, v...)
+	}
 }
 
 func Errorf(format string, v ...interface{}) {
-	log.Errorf(format, v...)
+	if logLevel <= logrus.ErrorLevel {
+		logrus.Errorf(logPrefix+format, v...)
+	}
+}
+
+func Infof(format string, v ...interface{}) {
+	if logLevel <= logrus.InfoLevel {
+		logrus.Infof(logPrefix+format, v...)
+	}
+}
+
+func Tracef(format string, v ...interface{}) {
+	if logLevel <= logrus.TraceLevel {
+		logrus.Tracef(logPrefix+format, v...)
+	}
+}
+
+func Warnf(format string, v ...interface{}) {
+	if logLevel <= logrus.WarnLevel {
+		logrus.Warnf(logPrefix+format, v...)
+	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/rakshasa/ethereum-watcher/plugin"
 	"github.com/rakshasa/ethereum-watcher/rpc"
 	"github.com/rakshasa/ethereum-watcher/structs"
+	"github.com/rakshasa/ethereum-watcher/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -82,14 +83,14 @@ func (watcher *AbstractWatcher) RunTillExit() error {
 // 0 means start from latest block
 func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error {
 	if startBlockNum == 0 {
-		logrus.Debugf("ethereum watcher is running until exit from latest block")
+		utils.Debugf("ethereum watcher is running until exit from latest block")
 	} else {
-		logrus.Debugf("ethereum watcher is running until exit from block %d", startBlockNum)
+		utils.Debugf("ethereum watcher is running until exit from block %d", startBlockNum)
 	}
 
 	watcher.wg.Add(1)
 	go func() {
-		logrus.Debugf("ethereum watcher started waiting for new blocks")
+		utils.Debugf("ethereum watcher started waiting for new blocks")
 
 		for block := range watcher.NewBlockChan {
 			// run thru block plugins
@@ -111,14 +112,14 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
-		logrus.Debugf("ethereum watcher done waiting for new blocks")
+		utils.Debugf("ethereum watcher done waiting for new blocks")
 
 		watcher.wg.Done()
 	}()
 
 	watcher.wg.Add(1)
 	go func() {
-		logrus.Debugf("ethereum watcher started waiting for new transactions and receipts")
+		utils.Debugf("ethereum watcher started waiting for new transactions and receipts")
 
 		for removableTxAndReceipt := range watcher.NewTxAndReceiptChan {
 
@@ -137,38 +138,38 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 			}
 		}
 
-		logrus.Debugf("ethereum watcher done waiting for new transactions and receipts")
+		utils.Debugf("ethereum watcher done waiting for new transactions and receipts")
 
 		watcher.wg.Done()
 	}()
 
 	watcher.wg.Add(1)
 	go func() {
-		logrus.Debugf("ethereum watcher started waiting for new receipt logs")
+		utils.Debugf("ethereum watcher started waiting for new receipt logs")
 
 		for removableReceiptLog := range watcher.NewReceiptLogChan {
-			logrus.Debugf("get receipt log from chan: %+v, txHash: %s", removableReceiptLog, removableReceiptLog.IReceiptLog.GetTransactionHash())
+			utils.Debugf("get receipt log from chan: %+v, txHash: %s", removableReceiptLog, removableReceiptLog.IReceiptLog.GetTransactionHash())
 
 			receiptLogsPlugins := watcher.ReceiptLogPlugins
 			for i := 0; i < len(receiptLogsPlugins); i++ {
 				p := receiptLogsPlugins[i]
 
 				if p.NeedReceiptLog(removableReceiptLog) {
-					logrus.Debugln("receipt log accepted")
+					utils.Debugf("receipt log accepted")
 					p.Accept(removableReceiptLog)
 				} else {
-					logrus.Debugln("receipt log not accepted")
+					utils.Debugf("receipt log not accepted")
 				}
 			}
 		}
 
-		logrus.Debugf("ethereum watcher done waiting for new receipt logs")
+		utils.Debugf("ethereum watcher done waiting for new receipt logs")
 
 		watcher.wg.Done()
 	}()
 
 	for {
-		logrus.Debugf("ethereum watcher handling events...")
+		utils.Debugf("ethereum watcher handling events...")
 
 		latestBlockNum, err := watcher.rpc.GetCurrentBlockNum()
 		if err != nil {
@@ -180,10 +181,10 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 		}
 
 		noNewBlockForSync := watcher.LatestSyncedBlockNum() >= latestBlockNum
-		logrus.Debugln("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
+		utils.Debugf("watcher.LatestSyncedBlockNum()", watcher.LatestSyncedBlockNum())
 
 		if noNewBlockForSync {
-			logrus.Debugf("no new block to sync, sleep for %d secs", watcher.sleepSecondsForNewBlock)
+			utils.Debugf("no new block to sync, sleep for %d secs", watcher.sleepSecondsForNewBlock)
 
 			// sleep for 3 secs
 			select {
@@ -211,7 +212,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 					newBlockNumToSync = watcher.LatestSyncedBlockNum() + 1
 				}
 
-				logrus.Debugln("newBlockNumToSync:", newBlockNumToSync)
+				utils.Debugf("newBlockNumToSync:", newBlockNumToSync)
 
 				newBlock, err := watcher.rpc.GetBlockByNum(newBlockNumToSync)
 				if err != nil {
@@ -223,7 +224,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 				}
 
 				if watcher.FoundFork(newBlock) {
-					logrus.Infof("found fork, popping")
+					utils.Infof("found fork, popping")
 
 					if err = watcher.popBlocksUntilReachMainChain(); err != nil {
 						return fmt.Errorf("popBlocksUntilReachMainChain: %w", err)
@@ -232,7 +233,7 @@ func (watcher *AbstractWatcher) RunTillExitFromBlock(startBlockNum uint64) error
 					continue
 				}
 
-				logrus.Debugf("adding new block: %d", newBlock.Number())
+				utils.Debugf("adding new block: %d", newBlock.Number())
 
 				if err = watcher.addNewBlock(structs.NewRemovableBlock(newBlock, false), latestBlockNum); err != nil {
 					return fmt.Errorf("addNewBlock: %w", err)
@@ -320,7 +321,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 			continue
 		}
 
-		logrus.Debugf("needReceipt of tx: %s in block: %d", tx.GetHash(), block.Number())
+		utils.Debugf("needReceipt of tx: %s in block: %d", tx.GetHash(), block.Number())
 
 		syncSigName := fmt.Sprintf("B:%d T:%s", block.Number(), tx.GetHash())
 
@@ -357,7 +358,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 	}
 
 	if skippedTxReceiptCount != 0 {
-		logrus.Debugf("skipped transaction receipt count: %d", skippedTxReceiptCount)
+		utils.Debugf("skipped transaction receipt count: %d", skippedTxReceiptCount)
 	}
 
 	for i := 0; i < len(signals); i++ {
@@ -366,14 +367,14 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 	}
 
 	queryMap := watcher.getReceiptLogQueryMap()
-	logrus.Debugln("getReceiptLogQueryMap:", queryMap)
+	utils.Debugf("getReceiptLogQueryMap:", queryMap)
 
 	bigStep := uint64(50)
 	if curHighestBlockNum-block.Number() > bigStep {
 		// only do request with bigStep
 		if watcher.ReceiptCatchUpFromBlock == 0 {
 			// init
-			logrus.Debugf("bigStep, init to %d", block.Number())
+			utils.Debugf("bigStep, init to %d", block.Number())
 			watcher.ReceiptCatchUpFromBlock = block.Number()
 		} else {
 			// check if we need do requests
@@ -381,7 +382,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 				fromBlock := watcher.ReceiptCatchUpFromBlock
 				toBlock := block.Number()
 
-				logrus.Debugf("bigStep, doing request, range: %d -> %d (minus: %d)", fromBlock, toBlock, block.Number()-watcher.ReceiptCatchUpFromBlock)
+				utils.Debugf("bigStep, doing request, range: %d -> %d (minus: %d)", fromBlock, toBlock, block.Number()-watcher.ReceiptCatchUpFromBlock)
 
 				for k, v := range queryMap {
 					err := watcher.fetchReceiptLogs(false, block, fromBlock, toBlock, k, v)
@@ -393,13 +394,13 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 				// update catch up block
 				watcher.ReceiptCatchUpFromBlock = block.Number() + 1
 			} else {
-				logrus.Debugf("bigStep, holding %d blocks: %d -> %d", block.Number()-watcher.ReceiptCatchUpFromBlock+1, watcher.ReceiptCatchUpFromBlock, block.Number())
+				utils.Debugf("bigStep, holding %d blocks: %d -> %d", block.Number()-watcher.ReceiptCatchUpFromBlock+1, watcher.ReceiptCatchUpFromBlock, block.Number())
 			}
 		}
 	} else {
 		// reset
 		if watcher.ReceiptCatchUpFromBlock != 0 {
-			logrus.Debugf("exit bigStep mode, ReceiptCatchUpFromBlock: %d, curBlock: %d, gap: %d", watcher.ReceiptCatchUpFromBlock, block.Number(), curHighestBlockNum-block.Number())
+			utils.Debugf("exit bigStep mode, ReceiptCatchUpFromBlock: %d, curBlock: %d, gap: %d", watcher.ReceiptCatchUpFromBlock, block.Number(), curHighestBlockNum-block.Number())
 			watcher.ReceiptCatchUpFromBlock = 0
 		}
 
@@ -444,7 +445,7 @@ func (watcher *AbstractWatcher) fetchReceiptLogs(isRemoved bool, block blockchai
 
 	for i := 0; i < len(receiptLogs); i++ {
 		log := receiptLogs[i]
-		logrus.Debugln("insert into chan: ", log.GetTransactionHash())
+		utils.Debugf("insert into chan: %s", log.GetTransactionHash())
 
 		watcher.NewReceiptLogChan <- &structs.RemovableReceiptLog{
 			IReceiptLog: log,
@@ -536,12 +537,12 @@ func (watcher *AbstractWatcher) FoundFork(newBlock blockchain.Block) bool {
 		//if syncedBlock == nil {
 		//	logrus.Warnln("error, syncedBlock is nil")
 		//}
-		//logrus.Debugf("syncedBlock: %+v", syncedBlock)
+		//utils.Debugf("syncedBlock: %+v", syncedBlock)
 
 		//if newBlock == nil {
 		//	logrus.Warnln("error, newBlock is nil")
 		//}
-		//logrus.Debugf("newBlock: %+v", newBlock)
+		//utils.Debugf("newBlock: %+v", newBlock)
 
 		if syncedBlock.Number()+1 == newBlock.Number() {
 			notMatch := (syncedBlock).Hash() != newBlock.ParentHash()
