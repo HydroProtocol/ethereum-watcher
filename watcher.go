@@ -437,8 +437,7 @@ func (watcher *AbstractWatcher) addNewBlock(block *structs.RemovableBlock, curHi
 }
 
 func (watcher *AbstractWatcher) fetchReceiptLogs(isRemoved bool, block blockchain.Block, from, to uint64, address string, topics []string) error {
-
-	receiptLogs, err := watcher.rpc.GetLogs(from, to, address, topics)
+	receiptLogs, err := watcher.rpc.GetLogs(from, to, []string{address}, topics)
 	if err != nil {
 		return err
 	}

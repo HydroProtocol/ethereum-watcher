@@ -59,14 +59,14 @@ func (rpc EthBlockChainRPC) GetCurrentBlockNum() (uint64, error) {
 
 func (rpc EthBlockChainRPC) GetLogs(
 	fromBlockNum, toBlockNum uint64,
-	address string,
+	addresses []string,
 	topics []string,
 ) ([]blockchain.IReceiptLog, error) {
 
 	filterParam := ethrpc.FilterParams{
 		FromBlock: "0x" + strconv.FormatUint(fromBlockNum, 16),
 		ToBlock:   "0x" + strconv.FormatUint(toBlockNum, 16),
-		Address:   []string{address},
+		Address:   addresses,
 		Topics:    [][]string{topics},
 	}
 

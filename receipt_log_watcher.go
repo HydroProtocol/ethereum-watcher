@@ -3,11 +3,12 @@ package ethereum_watcher
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/rakshasa/ethereum-watcher/blockchain"
 	"github.com/rakshasa/ethereum-watcher/rpc"
 	"github.com/sirupsen/logrus"
-	"sync"
-	"time"
 )
 
 type ReceiptLogWatcher struct {
@@ -136,7 +137,7 @@ func (w *ReceiptLogWatcher) Run() error {
 				to = highestBlockCanProcess
 			}
 
-			logs, err := rpc.GetLogs(uint64(blockNumToBeProcessedNext), uint64(to), w.contract, w.interestedTopics)
+			logs, err := rpc.GetLogs(uint64(blockNumToBeProcessedNext), uint64(to), []string{w.contract}, w.interestedTopics)
 			if err != nil {
 				return err
 			}

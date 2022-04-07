@@ -11,5 +11,5 @@ type IBlockChainRPC interface {
 	GetLiteBlockByNum(uint64) (blockchain.Block, error)
 	GetTransactionReceipt(txHash string) (blockchain.TransactionReceipt, error)
 
-	GetLogs(from, to uint64, address string, topics []string) ([]blockchain.IReceiptLog, error)
+	GetLogs(from, to uint64, address []string, topics []string) ([]blockchain.IReceiptLog, error)
 }
