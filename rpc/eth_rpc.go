@@ -64,8 +64,11 @@ func (rpc EthBlockChainRPC) GetLogs(
 	filterParam := ethrpc.FilterParams{
 		FromBlock: "0x" + strconv.FormatUint(fromBlockNum, 16),
 		ToBlock:   "0x" + strconv.FormatUint(toBlockNum, 16),
-		Address:   []string{address},
 		Topics:    [][]string{topics},
+	}
+
+	if address != "" {
+		filterParam.Address = []string{address}
 	}
 
 	logs, err := rpc.rpcImpl.EthGetLogs(filterParam)
