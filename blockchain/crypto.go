@@ -5,7 +5,8 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"github.com/HydroProtocol/ethereum-watcher/utils"
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	btcEcdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -51,6 +52,6 @@ func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
 	btcSig[0] = sig[64] + 27
 	copy(btcSig[1:], sig)
 
-	pub, _, err := btcec.RecoverCompact(btcec.S256(), btcSig, hash)
-	return (*ecdsa.PublicKey)(pub), err
+	pub, _, err := btcEcdsa.RecoverCompact(btcSig, hash)
+	return pub.ToECDSA(), err
 }
